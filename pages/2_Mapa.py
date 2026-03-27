@@ -201,11 +201,12 @@ else:
         )
 
         fig_cidade = px.scatter_mapbox(
-            mapa_cidade,
-            lat="lat",
-            lon="lon",
-            size=metrica,
-            color=metrica,
+    mapa_cidade,
+    lat="lat",
+    lon="lon",
+    size=metrica,
+    color=metrica,
+    color_continuous_scale="reds",  # 👈 AQUI
             size_max=40,
             zoom=5 if len(ufs_sel) <= 2 else 3.8,
             center={"lat": center_lat, "lon": center_lon},
@@ -255,7 +256,8 @@ else:
             mapa_nf,
             lat="lat_plot",
             lon="lon_plot",
-            size=np.full(len(mapa_nf), 10),
+            size=np.full(len(mapa_nf), 14),
+            opacity=0.85,
             color="Status",
             zoom=3.8,
             center={"lat": center_lat, "lon": center_lon},
