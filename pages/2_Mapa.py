@@ -2,7 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import unicodedata
+import re
 from utils.load_data import load_data
+
+
+def normalizar_texto(valor: str) -> str:
+    if pd.isna(valor):
+        return ""
+    valor = str(valor).strip().upper()
+    valor = unicodedata.normalize("NFKD", valor).encode("ASCII", "ignore").decode("ASCII")
+    valor = re.sub(r"\s+", " ", valor)
+    return valor
+
 
 st.title("🗺️ Mapa")
 
@@ -15,10 +27,8 @@ df.columns = df.columns.str.strip()
 # =========================
 # TRATAMENTOS
 # =========================
-df["Cidade"] = df["Cidade"].astype(str).str.upper().str.strip()
-df["UF"] = df["UF"].astype(str).str.upper().str.strip()
-df["Representante"] = df["Representante"].astype(str).str.upper().str.strip()
-df["Transportadora"] = df["Transportadora"].astype(str).str.upper().str.strip()
+for col in ["Cidade", "UF", "Representante", "Transportadora"]:
+    df[col] = df[col].astype(str).apply(normalizar_texto)
 
 df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
 
@@ -44,7 +54,7 @@ df["Status"] = df["Dias"].apply(
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    transportadoras = sorted(df["Transportadora"].dropna().unique())
+    transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x])
     transp_sel = st.multiselect(
         "Transportadora",
         transportadoras,
@@ -52,7 +62,7 @@ with col1:
     )
 
 with col2:
-    representantes = sorted(df["Representante"].dropna().unique())
+    representantes = sorted([x for x in df["Representante"].dropna().unique() if x])
     rep_sel = st.multiselect(
         "Representante",
         representantes,
@@ -77,6 +87,15 @@ df_filtrado = df[
 ].copy()
 
 # =========================
+# KPIs
+# =========================
+colk1, colk2, colk3, colk4 = st.columns(4)
+colk1.metric("Cidades no filtro", df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0])
+colk2.metric("UFs no filtro", df_filtrado["UF"].nunique())
+colk3.metric("Total NFs", len(df_filtrado))
+colk4.metric("Valor Total", f"R$ {df_filtrado['Valor'].sum():,.2f}")
+
+# =========================
 # MAPA POR UF
 # =========================
 mapa_uf = (
@@ -90,7 +109,7 @@ mapa_uf = (
 )
 
 geojson_url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson"
-brasil_geojson = requests.get(geojson_url).json()
+brasil_geojson = requests.get(geojson_url, timeout=30).json()
 
 fig_uf = px.choropleth(
     mapa_uf,
@@ -106,7 +125,6 @@ fig_uf = px.choropleth(
     },
     title=f"Mapa por UF - {metrica_label}"
 )
-
 fig_uf.update_geos(fitbounds="locations", visible=False)
 st.plotly_chart(fig_uf, use_container_width=True)
 
@@ -120,38 +138,40 @@ st.dataframe(ranking_uf, use_container_width=True)
 st.divider()
 st.subheader("📍 Mapa por Cidade")
 
-# carregar coordenadas
 cidades = pd.read_csv("data/cidades.csv")
-cidades["Cidade"] = cidades["Cidade"].astype(str).str.upper().str.strip()
-cidades["UF"] = cidades["UF"].astype(str).str.upper().str.strip()
+cidades.columns = cidades.columns.str.strip()
 
-# merge com coordenadas
+for col in ["Cidade", "UF"]:
+    cidades[col] = cidades[col].astype(str).apply(normalizar_texto)
+
+cidades["lat"] = pd.to_numeric(cidades["lat"], errors="coerce")
+cidades["lon"] = pd.to_numeric(cidades["lon"], errors="coerce")
+
 mapa_cidade = df_filtrado.merge(
-    cidades,
+    cidades[["Cidade", "UF", "lat", "lon"]],
     on=["Cidade", "UF"],
     how="left"
 )
 
-# mostrar cidades sem coordenadas
-st.write("🔍 Cidades sem coordenadas:")
-faltando = mapa_cidade[mapa_cidade["lat"].isna()]
-st.dataframe(
-    faltando[["Cidade", "UF"]].drop_duplicates(),
-    use_container_width=True
-)
+faltando = mapa_cidade[mapa_cidade["lat"].isna()][["Cidade", "UF"]].drop_duplicates()
+encontradas = mapa_cidade[mapa_cidade["lat"].notna()][["Cidade", "UF"]].drop_duplicates()
 
-# manter só cidades com lat/lon
+colm1, colm2 = st.columns(2)
+colm1.metric("Cidades com coordenadas", len(encontradas))
+colm2.metric("Cidades sem coordenadas", len(faltando))
+
+with st.expander("Ver cidades sem coordenadas"):
+    st.dataframe(faltando.sort_values(["UF", "Cidade"]), use_container_width=True)
+
 mapa_cidade = mapa_cidade.dropna(subset=["lat", "lon"])
 
-# agrupar
 mapa_cidade = (
-    mapa_cidade.groupby(["Cidade", "UF", "lat", "lon"])
+    mapa_cidade.groupby(["Cidade", "UF", "lat", "lon"], as_index=False)
     .agg(
         qtd_nfs=("NF", "count"),
         valor_total=("Valor", "sum"),
         vol_total=("Vol", "sum"),
     )
-    .reset_index()
 )
 
 if mapa_cidade.empty:
@@ -173,11 +193,10 @@ else:
             "lon": False,
         },
         zoom=3,
-        height=600,
+        height=650,
         title=f"Mapa por Cidade - {metrica_label}"
     )
-
-    fig_cidade.update_layout(mapbox_style="open-street-map")
+    fig_cidade.update_layout(mapbox_style="open-street-map", margin=dict(l=0, r=0, t=50, b=0))
     st.plotly_chart(fig_cidade, use_container_width=True)
 
     st.subheader("Ranking por Cidade")
