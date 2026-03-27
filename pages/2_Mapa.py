@@ -6,7 +6,9 @@ import unicodedata
 import re
 from utils.load_data import load_data
 
-
+def formatar_moeda_br(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    
 def normalizar_texto(valor: str) -> str:
     if pd.isna(valor):
         return ""
@@ -156,7 +158,7 @@ colk1, colk2, colk3, colk4 = st.columns(4)
 colk1.metric("Cidades no filtro", df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0])
 colk2.metric("UFs no filtro", df_filtrado["UF"].nunique())
 colk3.metric("Total NFs", len(df_filtrado))
-colk4.metric("Valor Total", f"R$ {df_filtrado['Valor'].sum():,.2f}")
+colk4.metric("Valor das Notas", formatar_moeda_br(df_filtrado["Valor"].sum()))
 
 # =========================
 # MAPA POR UF
