@@ -49,27 +49,76 @@ df["Status"] = df["Dias"].apply(
 )
 
 # =========================
-# FILTROS
+# FILTROS INTELIGENTES
 # =========================
-col1, col2, col3 = st.columns(3)
+
+st.subheader("Filtros")
+
+base_filtros = df.copy()
+
+col1, col2, col3, col4 = st.columns(4)
+
+# estado inicial
+transportadoras_all = sorted([x for x in base_filtros["Transportadora"].dropna().unique() if x])
+representantes_all = sorted([x for x in base_filtros["Representante"].dropna().unique() if x])
+ufs_all = sorted([x for x in base_filtros["UF"].dropna().unique() if x])
+cidades_all = sorted([x for x in base_filtros["Cidade"].dropna().unique() if x])
 
 with col1:
-    transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x])
     transp_sel = st.multiselect(
         "Transportadora",
-        transportadoras,
-        default=transportadoras
+        transportadoras_all,
+        default=[]
     )
+
+# restringe base conforme transportadora
+base_rep = base_filtros.copy()
+if transp_sel:
+    base_rep = base_rep[base_rep["Transportadora"].isin(transp_sel)]
 
 with col2:
-    representantes = sorted([x for x in df["Representante"].dropna().unique() if x])
+    representantes_disp = sorted([x for x in base_rep["Representante"].dropna().unique() if x])
     rep_sel = st.multiselect(
         "Representante",
-        representantes,
-        default=representantes
+        representantes_disp,
+        default=[]
     )
 
+# restringe base conforme transportadora + representante
+base_uf = base_filtros.copy()
+if transp_sel:
+    base_uf = base_uf[base_uf["Transportadora"].isin(transp_sel)]
+if rep_sel:
+    base_uf = base_uf[base_uf["Representante"].isin(rep_sel)]
+
 with col3:
+    ufs_disp = sorted([x for x in base_uf["UF"].dropna().unique() if x])
+    uf_sel = st.multiselect(
+        "UF",
+        ufs_disp,
+        default=[]
+    )
+
+# restringe base conforme transportadora + representante + uf
+base_cidade = base_filtros.copy()
+if transp_sel:
+    base_cidade = base_cidade[base_cidade["Transportadora"].isin(transp_sel)]
+if rep_sel:
+    base_cidade = base_cidade[base_cidade["Representante"].isin(rep_sel)]
+if uf_sel:
+    base_cidade = base_cidade[base_cidade["UF"].isin(uf_sel)]
+
+with col4:
+    cidades_disp = sorted([x for x in base_cidade["Cidade"].dropna().unique() if x])
+    cidade_sel = st.multiselect(
+        "Cidade",
+        cidades_disp,
+        default=[]
+    )
+
+col5, col6 = st.columns(2)
+
+with col5:
     metricas = {
         "Quantidade de NFs": "qtd_nfs",
         "Valor Total": "valor_total",
@@ -78,14 +127,28 @@ with col3:
     metrica_label = st.selectbox("Métrica do mapa", list(metricas.keys()))
     metrica = metricas[metrica_label]
 
-# =========================
-# BASE FILTRADA
-# =========================
-df_filtrado = df[
-    df["Transportadora"].isin(transp_sel) &
-    df["Representante"].isin(rep_sel)
-].copy()
+with col6:
+    modo_mapa = st.radio(
+        "Visualização",
+        ["Agrupado por cidade", "Cada NF"],
+        horizontal=True
+    )
 
+# aplica filtros finais
+df_filtrado = base_filtros.copy()
+
+if transp_sel:
+    df_filtrado = df_filtrado[df_filtrado["Transportadora"].isin(transp_sel)]
+if rep_sel:
+    df_filtrado = df_filtrado[df_filtrado["Representante"].isin(rep_sel)]
+if uf_sel:
+    df_filtrado = df_filtrado[df_filtrado["UF"].isin(uf_sel)]
+if cidade_sel:
+    df_filtrado = df_filtrado[df_filtrado["Cidade"].isin(cidade_sel)]
+
+# mensagem amigável se nada encontrado
+if df_filtrado.empty:
+    st.warning("Nenhum registro encontrado com os filtros selecionados. Ajuste Transportadora, Representante, UF ou Cidade.")
 # =========================
 # KPIs
 # =========================
@@ -152,10 +215,7 @@ cidades["lat"] = pd.to_numeric(cidades["lat"], errors="coerce")
 cidades["lon"] = pd.to_numeric(cidades["lon"], errors="coerce")
 
 # filtro extra por UF no mapa
-ufs_disp = sorted([x for x in df_filtrado["UF"].dropna().unique() if x])
-ufs_sel = st.multiselect("UF no mapa", ufs_disp, default=ufs_disp)
-
-df_mapa = df_filtrado[df_filtrado["UF"].isin(ufs_sel)].copy()
+df_mapa = df_filtrado.copy()
 
 # merge com base fixa
 mapa_base = df_mapa.merge(
@@ -208,7 +268,7 @@ else:
     color=metrica,
     color_continuous_scale="reds",  # 👈 AQUI
             size_max=40,
-            zoom=5 if len(ufs_sel) <= 2 else 3.8,
+           zoom=5 if uf_sel and len(uf_sel) <= 2 else 3.8,
             center={"lat": center_lat, "lon": center_lon},
             height=650,
             hover_name="Cidade",
