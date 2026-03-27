@@ -1,3 +1,6 @@
+def formatar_moeda_br(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -154,12 +157,18 @@ if df_filtrado.empty:
 # =========================
 # KPIs
 # =========================
-colk1, colk2, colk3, colk4 = st.columns(4)
+colk1, colk2, colk3, colk4 = st.columns([1, 1, 1, 2])
+
 colk1.metric("Cidades no filtro", df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0])
 colk2.metric("UFs no filtro", df_filtrado["UF"].nunique())
 colk3.metric("Total NFs", len(df_filtrado))
-colk4.metric("Valor das Notas", formatar_moeda_br(df_filtrado["Valor"].sum()))
 
+with colk4:
+    st.markdown("**Valor das Notas**")
+    st.markdown(
+        f"<h2 style='margin-top:0; white-space: nowrap;'>{formatar_moeda_br(df_filtrado['Valor'].sum())}</h2>",
+        unsafe_allow_html=True
+    )
 # =========================
 # MAPA POR UF
 # =========================
