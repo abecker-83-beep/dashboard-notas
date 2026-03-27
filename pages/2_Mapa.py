@@ -166,9 +166,19 @@ colk3.metric("Total NFs", len(df_filtrado))
 with colk4:
     st.markdown("**Valor das Notas**")
     st.markdown(
-        f"<h2 style='margin-top:0; white-space: nowrap;'>{formatar_moeda_br(df_filtrado['Valor'].sum())}</h2>",
-        unsafe_allow_html=True
-    )
+    f"""
+    <div style="
+        font-size: 32px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    ">
+        {formatar_moeda_br(df_filtrado['Valor'].sum())}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 # =========================
 # MAPA POR UF
 # =========================
