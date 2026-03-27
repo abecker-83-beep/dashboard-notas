@@ -163,6 +163,11 @@ df_filtrado["Cidade"] = df_filtrado["Cidade"].str.upper().str.strip()
 
 # juntar com coordenadas
 mapa_cidade = df_filtrado.merge(
+    st.write("🔍 Cidades sem coordenadas:")
+
+faltando = mapa_cidade[mapa_cidade["lat"].isna()]
+
+st.dataframe(faltando[["Cidade", "UF"]].drop_duplicates())
     cidades,
     on=["Cidade", "UF"],
     how="left"
