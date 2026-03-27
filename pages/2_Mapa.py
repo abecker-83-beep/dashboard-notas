@@ -152,6 +152,55 @@ fig_cidade = px.scatter_mapbox(
     height=600
 )
 
+st.divider()
+st.subheader("📍 Mapa por Cidade")
+
+# carregar base de cidades
+cidades = pd.read_csv("data/cidades.csv")
+
+# padronizar
+df_filtrado["Cidade"] = df_filtrado["Cidade"].str.upper().str.strip()
+
+# juntar com coordenadas
+mapa_cidade = df_filtrado.merge(
+    cidades,
+    on=["Cidade", "UF"],
+    how="left"
+)
+
+mapa_cidade = mapa_cidade.dropna(subset=["lat", "lon"])
+
+# agregação
+mapa_cidade = (
+    mapa_cidade.groupby(["Cidade", "UF", "lat", "lon"])
+    .agg(
+        qtd_nfs=("NF", "count"),
+        valor_total=("Valor", "sum"),
+        vol_total=("Vol", "sum"),
+    )
+    .reset_index()
+)
+
+fig_cidade = px.scatter_mapbox(
+    mapa_cidade,
+    lat="lat",
+    lon="lon",
+    size=metrica,
+    color=metrica,
+    hover_name="Cidade",
+    hover_data={
+        "UF": True,
+        "qtd_nfs": True,
+        "valor_total": ":,.2f",
+        "vol_total": True,
+    },
+    zoom=3,
+    height=600
+)
+
+fig_cidade.update_layout(mapbox_style="open-street-map")
+
+st.plotly_chart(fig_cidade, use_container_width=True)
 fig_cidade.update_layout(mapbox_style="open-street-map")
 
 st.plotly_chart(fig_cidade, use_container_width=True)
