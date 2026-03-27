@@ -99,3 +99,59 @@ ranking_uf = mapa_uf.sort_values(metrica, ascending=False)
 
 st.subheader("Ranking por UF")
 st.dataframe(ranking_uf, use_container_width=True)
+
+st.divider()
+st.subheader("📍 Mapa por Cidade")
+
+# Agrupar por cidade
+mapa_cidade = (
+    df_filtrado.groupby(["Cidade", "UF"])
+    .agg(
+        qtd_nfs=("NF", "count"),
+        valor_total=("Valor", "sum"),
+        vol_total=("Vol", "sum"),
+    )
+    .reset_index()
+)
+
+# 🔥 Coordenadas básicas (vamos melhorar depois)
+import requests
+
+def get_lat_lon(cidade, uf):
+    try:
+        url = f"https://nominatim.openstreetmap.org/search?city={cidade}&state={uf}&country=Brazil&format=json"
+        r = requests.get(url).json()
+        if len(r) > 0:
+            return float(r[0]["lat"]), float(r[0]["lon"])
+    except:
+        pass
+    return None, None
+
+# Criar colunas
+mapa_cidade["lat"], mapa_cidade["lon"] = zip(
+    *mapa_cidade.apply(lambda row: get_lat_lon(row["Cidade"], row["UF"]), axis=1)
+)
+
+mapa_cidade = mapa_cidade.dropna(subset=["lat", "lon"])
+
+# Plotar mapa
+fig_cidade = px.scatter_mapbox(
+    mapa_cidade,
+    lat="lat",
+    lon="lon",
+    size=metrica,
+    color=metrica,
+    hover_name="Cidade",
+    hover_data={
+        "UF": True,
+        "qtd_nfs": True,
+        "valor_total": ":,.2f",
+        "vol_total": True,
+    },
+    zoom=3,
+    height=600
+)
+
+fig_cidade.update_layout(mapbox_style="open-street-map")
+
+st.plotly_chart(fig_cidade, use_container_width=True)
