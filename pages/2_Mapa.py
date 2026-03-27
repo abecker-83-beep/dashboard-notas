@@ -235,12 +235,6 @@ col_c.metric("Linhas no mapa", len(mapa_base.dropna(subset=["lat", "lon"])))
 with st.expander("Ver cidades sem coordenadas"):
     st.dataframe(faltando.sort_values(["UF", "Cidade"]), use_container_width=True)
 
-modo_mapa = st.radio(
-    "Visualização",
-    ["Agrupado por cidade", "Cada NF"],
-    horizontal=True
-)
-
 mapa_base = mapa_base.dropna(subset=["lat", "lon"]).copy()
 
 if mapa_base.empty:
