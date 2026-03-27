@@ -5,5 +5,5 @@ st.title("📊 Resumo")
 
 df = load_data()
 
-st.write("Prévia dos dados:")
-st.dataframe(df.head())
+st.subheader("📦 Dados carregados")
+st.dataframe(df)
