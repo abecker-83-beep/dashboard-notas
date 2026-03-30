@@ -12,15 +12,14 @@ from utils.load_data import load_data
 # ============================================================
 # CONFIGURAÇÕES GERAIS
 # ============================================================
-st.set_page_config(page_title="Mapa", layout="wide")
 st.title("🗺️ Mapa V3")
 st.caption("Mapa operacional com visão analítica por UF, cidade e NF.")
 
 
 STATUS_COLORS = {
-    "No prazo": "#22C55E",      # verde
-    "Vence hoje": "#EAB308",    # amarelo
-    "Atrasado": "#EF4444",      # vermelho
+    "No prazo": "#22C55E",
+    "Vence hoje": "#EAB308",
+    "Atrasado": "#EF4444",
 }
 
 METRICAS = {
@@ -53,6 +52,38 @@ def normalizar_texto(valor: str) -> str:
     valor = unicodedata.normalize("NFKD", valor).encode("ASCII", "ignore").decode("ASCII")
     valor = re.sub(r"\s+", " ", valor)
     return valor
+
+
+def card_indicador(titulo, valor, cor="#1f2937", fundo="#ffffff", borda="#e5e7eb"):
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {fundo};
+            border: 1px solid {borda};
+            border-radius: 14px;
+            padding: 16px 18px;
+            min-height: 110px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        ">
+            <div style="
+                font-size: 14px;
+                color: #6b7280;
+                margin-bottom: 10px;
+                font-weight: 500;
+            ">
+                {titulo}
+            </div>
+            <div style="
+                font-size: 20px;
+                font-weight: 700;
+                color: {cor};
+            ">
+                {valor}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -97,9 +128,11 @@ def carregar_dados():
             .astype(str)
             .str.strip()
             .replace("", np.nan)
-            .fillna(df["Dias"].apply(
-                lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
-            ))
+            .fillna(
+                df["Dias"].apply(
+                    lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
+                )
+            )
         )
 
     return df
@@ -143,7 +176,11 @@ def calcular_zoom(df_mapa, uf_sel, modo):
         return 3.6
 
     qtd_ufs = df_mapa["UF"].nunique() if "UF" in df_mapa.columns else 0
-    qtd_cidades = df_mapa[["Cidade", "UF"]].drop_duplicates().shape[0] if {"Cidade", "UF"}.issubset(df_mapa.columns) else 0
+    qtd_cidades = (
+        df_mapa[["Cidade", "UF"]].drop_duplicates().shape[0]
+        if {"Cidade", "UF"}.issubset(df_mapa.columns)
+        else 0
+    )
 
     if uf_sel:
         if len(uf_sel) == 1:
@@ -294,7 +331,7 @@ def gerar_mapa_cidade_agrupado(
     if base.empty:
         return None
 
-    sizeref = max(base[metrica].max() / 42, 1)
+    sizeref = max(base[metrica].max() / 40, 1)
 
     fig = px.scatter_mapbox(
         base,
@@ -323,12 +360,7 @@ def gerar_mapa_cidade_agrupado(
     )
 
     fig.update_traces(
-        marker=dict(
-            sizemode="area",
-            sizeref=sizeref,
-            line=dict(width=1, color="rgba(255,255,255,0.7)"),
-            opacity=0.85,
-        ),
+        marker=dict(opacity=0.82),
         hovertemplate=(
             "<b>%{hovertext}</b><br>"
             "UF: %{customdata[0]}<br>"
@@ -369,15 +401,11 @@ def gerar_mapa_nf_individual(
         if col not in base.columns:
             base[col] = ""
 
-    # Distribuição visual mais suave para evitar sobreposição:
-    # espalha os pontos em círculos pequenos por cidade
     base["ordem"] = base.groupby(["Cidade", "UF"]).cumcount()
     base["angulo"] = (base["ordem"] % 12) * (2 * np.pi / 12)
     base["anel"] = (base["ordem"] // 12) + 1
-
-    # Ajuste sutil para não deformar demais o mapa
-    base["lat_plot"] = base["lat"] + np.sin(base["angulo"]) * (0.045 * base["anel"])
-    base["lon_plot"] = base["lon"] + np.cos(base["angulo"]) * (0.045 * base["anel"])
+    base["lat_plot"] = base["lat"] + np.sin(base["angulo"]) * (0.035 * base["anel"])
+    base["lon_plot"] = base["lon"] + np.cos(base["angulo"]) * (0.035 * base["anel"])
 
     fig = px.scatter_mapbox(
         base,
@@ -407,9 +435,8 @@ def gerar_mapa_nf_individual(
 
     fig.update_traces(
         marker=dict(
-            size=9,
-            opacity=0.55,
-            line=dict(width=0.3, color="rgba(255,255,255,0.5)"),
+            size=8,
+            opacity=0.50,
         ),
         hovertemplate=(
             "<b>%{hovertext}</b><br>"
@@ -495,9 +522,6 @@ base_filtros = df.copy()
 col1, col2, col3, col4 = st.columns(4)
 
 transportadoras_all = sorted([x for x in base_filtros["Transportadora"].dropna().unique() if x])
-representantes_all = sorted([x for x in base_filtros["Representante"].dropna().unique() if x])
-ufs_all = sorted([x for x in base_filtros["UF"].dropna().unique() if x])
-cidades_all = sorted([x for x in base_filtros["Cidade"].dropna().unique() if x])
 
 with col1:
     transp_sel = st.multiselect("Transportadora", transportadoras_all, default=[])
@@ -578,7 +602,11 @@ mapa_uf = gerar_agregado_uf(df_filtrado)
 if mapa_ok.empty:
     st.warning("Nenhuma cidade com coordenadas encontrada para os filtros selecionados.")
     with st.expander("Ver cidades sem coordenadas"):
-        st.dataframe(faltando.sort_values(["UF", "Cidade"]), use_container_width=True, hide_index=True)
+        st.dataframe(
+            faltando.sort_values(["UF", "Cidade"]),
+            use_container_width=True,
+            hide_index=True
+        )
     st.stop()
 
 mapa_cidade = gerar_agregado_cidade(mapa_ok)
@@ -602,10 +630,45 @@ perc_coord = percentual(
     mapa_base[["Cidade", "UF"]].drop_duplicates().shape[0],
 )
 
-colr1.metric("NFs atrasadas", f"{total_atrasadas:,}".replace(",", "."))
-colr2.metric("Vence hoje", f"{total_vence_hoje:,}".replace(",", "."))
-colr3.metric("% atraso", f"{perc_atraso_total:.1f}%")
-colr4.metric("Cobertura geográfica", f"{perc_coord:.1f}%")
+cor_perc = "#15803D" if perc_atraso_total < 10 else "#D97706" if perc_atraso_total < 20 else "#DC2626"
+fundo_perc = "#F0FDF4" if perc_atraso_total < 10 else "#FFFBEB" if perc_atraso_total < 20 else "#FEF2F2"
+borda_perc = "#BBF7D0" if perc_atraso_total < 10 else "#FDE68A" if perc_atraso_total < 20 else "#FECACA"
+
+with colr1:
+    card_indicador(
+        "NFs atrasadas",
+        f"{total_atrasadas:,}".replace(",", "."),
+        cor="#DC2626",
+        fundo="#FEF2F2",
+        borda="#FECACA"
+    )
+
+with colr2:
+    card_indicador(
+        "Vence hoje",
+        f"{total_vence_hoje:,}".replace(",", "."),
+        cor="#D97706",
+        fundo="#FFFBEB",
+        borda="#FDE68A"
+    )
+
+with colr3:
+    card_indicador(
+        "% atraso",
+        f"{perc_atraso_total:.1f}%",
+        cor=cor_perc,
+        fundo=fundo_perc,
+        borda=borda_perc
+    )
+
+with colr4:
+    card_indicador(
+        "Cobertura geográfica",
+        f"{perc_coord:.1f}%",
+        cor="#15803D",
+        fundo="#F0FDF4",
+        borda="#BBF7D0"
+    )
 
 with st.expander("Qualidade geográfica / cidades sem coordenadas"):
     c1, c2, c3 = st.columns(3)
