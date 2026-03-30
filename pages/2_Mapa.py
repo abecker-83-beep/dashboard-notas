@@ -1,17 +1,51 @@
-def formatar_moeda_br(valor):
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import requests
-import unicodedata
 import re
+import unicodedata
+import requests
+import numpy as np
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+
 from utils.load_data import load_data
 
+
+# ============================================================
+# CONFIGURAÇÕES GERAIS
+# ============================================================
+st.set_page_config(page_title="Mapa", layout="wide")
+st.title("🗺️ Mapa V3")
+st.caption("Mapa operacional com visão analítica por UF, cidade e NF.")
+
+
+STATUS_COLORS = {
+    "No prazo": "#22C55E",      # verde
+    "Vence hoje": "#EAB308",    # amarelo
+    "Atrasado": "#EF4444",      # vermelho
+}
+
+METRICAS = {
+    "Quantidade de NFs": "qtd_nfs",
+    "Valor total": "valor_total",
+    "Volume total": "vol_total",
+}
+
+MAP_STYLES = {
+    "Claro": "carto-positron",
+    "Escuro": "carto-darkmatter",
+    "OpenStreetMap": "open-street-map",
+}
+
+
+# ============================================================
+# FUNÇÕES AUXILIARES
+# ============================================================
 def formatar_moeda_br(valor):
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    
+    try:
+        return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "R$ 0,00"
+
+
 def normalizar_texto(valor: str) -> str:
     if pd.isna(valor):
         return ""
@@ -21,75 +55,461 @@ def normalizar_texto(valor: str) -> str:
     return valor
 
 
-st.title("🗺️ Mapa")
+@st.cache_data(show_spinner=False)
+def carregar_dados():
+    df = load_data().copy()
+    df.columns = df.columns.str.strip()
 
-# =========================
-# CARREGAR DADOS
-# =========================
-df = load_data()
-df.columns = df.columns.str.strip()
+    for col in ["Cidade", "UF", "Representante", "Transportadora"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str).apply(normalizar_texto)
 
-# =========================
-# TRATAMENTOS
-# =========================
-for col in ["Cidade", "UF", "Representante", "Transportadora"]:
-    df[col] = df[col].astype(str).apply(normalizar_texto)
+    if "Dias" in df.columns:
+        df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
+    else:
+        df["Dias"] = 0
 
-df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
+    if "Valor" in df.columns:
+        df["Valor"] = (
+            df["Valor"]
+            .astype(str)
+            .str.replace("R$", "", regex=False)
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+            .str.strip()
+        )
+        df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
+    else:
+        df["Valor"] = 0
 
-df["Valor"] = (
-    df["Valor"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
-)
-df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
+    if "Vol" in df.columns:
+        df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
+    else:
+        df["Vol"] = 0
 
-df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
+    if "Status" not in df.columns or df["Status"].isna().all():
+        df["Status"] = df["Dias"].apply(
+            lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
+        )
+    else:
+        df["Status"] = (
+            df["Status"]
+            .astype(str)
+            .str.strip()
+            .replace("", np.nan)
+            .fillna(df["Dias"].apply(
+                lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
+            ))
+        )
 
-df["Status"] = df["Dias"].apply(
-    lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
-)
+    return df
 
-# =========================
-# FILTROS INTELIGENTES
-# =========================
 
+@st.cache_data(show_spinner=False)
+def carregar_cidades():
+    cidades = pd.read_csv("data/cidades.csv")
+    cidades.columns = cidades.columns.str.strip()
+
+    for col in ["Cidade", "UF"]:
+        cidades[col] = cidades[col].astype(str).apply(normalizar_texto)
+
+    cidades["lat"] = pd.to_numeric(cidades["lat"], errors="coerce")
+    cidades["lon"] = pd.to_numeric(cidades["lon"], errors="coerce")
+    return cidades
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def carregar_geojson_brasil():
+    geojson_url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson"
+    return requests.get(geojson_url, timeout=30).json()
+
+
+def classificar_status_cidade(row):
+    if row["qtd_atrasadas"] > 0:
+        return "Atrasado"
+    if row["qtd_vence_hoje"] > 0:
+        return "Vence hoje"
+    return "No prazo"
+
+
+def percentual(valor, total):
+    if total == 0:
+        return 0.0
+    return (valor / total) * 100
+
+
+def calcular_zoom(df_mapa, uf_sel, modo):
+    if len(df_mapa) == 0:
+        return 3.6
+
+    qtd_ufs = df_mapa["UF"].nunique() if "UF" in df_mapa.columns else 0
+    qtd_cidades = df_mapa[["Cidade", "UF"]].drop_duplicates().shape[0] if {"Cidade", "UF"}.issubset(df_mapa.columns) else 0
+
+    if uf_sel:
+        if len(uf_sel) == 1:
+            return 5.6 if modo == "Agrupado por cidade" else 6.0
+        if len(uf_sel) == 2:
+            return 4.8 if modo == "Agrupado por cidade" else 5.0
+        if len(uf_sel) <= 4:
+            return 4.2
+        return 3.8
+
+    if qtd_ufs <= 3:
+        return 4.5
+    if qtd_ufs <= 8:
+        return 4.0
+    if qtd_cidades <= 30:
+        return 4.2
+    return 3.7
+
+
+def calcular_center(df_mapa):
+    if df_mapa.empty:
+        return {"lat": -14.2350, "lon": -51.9253}
+    return {
+        "lat": float(df_mapa["lat"].mean()),
+        "lon": float(df_mapa["lon"].mean()),
+    }
+
+
+def aplicar_filtros(df, transp_sel, rep_sel, uf_sel, cidade_sel):
+    df_filtrado = df.copy()
+
+    if transp_sel:
+        df_filtrado = df_filtrado[df_filtrado["Transportadora"].isin(transp_sel)]
+    if rep_sel:
+        df_filtrado = df_filtrado[df_filtrado["Representante"].isin(rep_sel)]
+    if uf_sel:
+        df_filtrado = df_filtrado[df_filtrado["UF"].isin(uf_sel)]
+    if cidade_sel:
+        df_filtrado = df_filtrado[df_filtrado["Cidade"].isin(cidade_sel)]
+
+    return df_filtrado
+
+
+def gerar_base_mapa(df_filtrado, cidades):
+    mapa_base = df_filtrado.merge(
+        cidades[["Cidade", "UF", "lat", "lon"]],
+        on=["Cidade", "UF"],
+        how="left"
+    )
+
+    faltando = mapa_base[mapa_base["lat"].isna()][["Cidade", "UF"]].drop_duplicates()
+    mapa_ok = mapa_base.dropna(subset=["lat", "lon"]).copy()
+
+    return mapa_base, mapa_ok, faltando
+
+
+def gerar_agregado_uf(df_filtrado):
+    base = df_filtrado.copy()
+    base["flag_atraso"] = (base["Status"] == "Atrasado").astype(int)
+
+    mapa_uf = (
+        base.groupby("UF", dropna=False)
+        .agg(
+            qtd_nfs=("NF", "count"),
+            valor_total=("Valor", "sum"),
+            vol_total=("Vol", "sum"),
+            qtd_atrasadas=("flag_atraso", "sum"),
+        )
+        .reset_index()
+    )
+
+    mapa_uf["perc_atraso"] = np.where(
+        mapa_uf["qtd_nfs"] > 0,
+        (mapa_uf["qtd_atrasadas"] / mapa_uf["qtd_nfs"]) * 100,
+        0,
+    )
+    return mapa_uf
+
+
+def gerar_agregado_cidade(mapa_ok):
+    base = mapa_ok.copy()
+    base["flag_atraso"] = (base["Status"] == "Atrasado").astype(int)
+    base["flag_vence_hoje"] = (base["Status"] == "Vence hoje").astype(int)
+    base["flag_no_prazo"] = (base["Status"] == "No prazo").astype(int)
+
+    mapa_cidade = (
+        base.groupby(["Cidade", "UF", "lat", "lon"], as_index=False)
+        .agg(
+            qtd_nfs=("NF", "count"),
+            valor_total=("Valor", "sum"),
+            vol_total=("Vol", "sum"),
+            qtd_atrasadas=("flag_atraso", "sum"),
+            qtd_vence_hoje=("flag_vence_hoje", "sum"),
+            qtd_no_prazo=("flag_no_prazo", "sum"),
+        )
+    )
+
+    mapa_cidade["perc_atraso"] = np.where(
+        mapa_cidade["qtd_nfs"] > 0,
+        (mapa_cidade["qtd_atrasadas"] / mapa_cidade["qtd_nfs"]) * 100,
+        0,
+    ).round(1)
+
+    mapa_cidade["status_mapa"] = mapa_cidade.apply(classificar_status_cidade, axis=1)
+
+    return mapa_cidade
+
+
+def gerar_mapa_uf(mapa_uf, metrica, metrica_label):
+    brasil_geojson = carregar_geojson_brasil()
+
+    fig_uf = px.choropleth(
+        mapa_uf,
+        geojson=brasil_geojson,
+        locations="UF",
+        featureidkey="properties.sigla",
+        color=metrica,
+        hover_name="UF",
+        hover_data={
+            "qtd_nfs": True,
+            "valor_total": ":,.2f",
+            "vol_total": True,
+            "qtd_atrasadas": True,
+            "perc_atraso": ":.1f",
+        },
+        title=f"Mapa do Brasil por UF • {metrica_label}",
+        color_continuous_scale="Blues",
+    )
+    fig_uf.update_geos(fitbounds="locations", visible=False)
+    fig_uf.update_layout(margin=dict(l=0, r=0, t=60, b=0))
+    return fig_uf
+
+
+def gerar_mapa_cidade_agrupado(
+    mapa_cidade,
+    metrica,
+    metrica_label,
+    map_style,
+    zoom,
+    center,
+    destacar_so_atrasos,
+):
+    base = mapa_cidade.copy()
+
+    if destacar_so_atrasos:
+        base = base[base["qtd_atrasadas"] > 0].copy()
+
+    if base.empty:
+        return None
+
+    sizeref = max(base[metrica].max() / 42, 1)
+
+    fig = px.scatter_mapbox(
+        base,
+        lat="lat",
+        lon="lon",
+        size=metrica,
+        color="status_mapa",
+        color_discrete_map=STATUS_COLORS,
+        hover_name="Cidade",
+        hover_data={
+            "UF": True,
+            "qtd_nfs": True,
+            "valor_total": ":,.2f",
+            "vol_total": True,
+            "qtd_atrasadas": True,
+            "perc_atraso": ":.1f",
+            "lat": False,
+            "lon": False,
+            "status_mapa": True,
+        },
+        size_max=34,
+        zoom=zoom,
+        center=center,
+        height=700,
+        title=f"Mapa por Cidade • {metrica_label}",
+    )
+
+    fig.update_traces(
+        marker=dict(
+            sizemode="area",
+            sizeref=sizeref,
+            line=dict(width=1, color="rgba(255,255,255,0.7)"),
+            opacity=0.85,
+        ),
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "UF: %{customdata[0]}<br>"
+            "Qtd NFs: %{customdata[1]}<br>"
+            "Valor total: R$ %{customdata[2]:,.2f}<br>"
+            "Volume total: %{customdata[3]}<br>"
+            "Qtd atrasadas: %{customdata[4]}<br>"
+            "% atraso: %{customdata[5]:.1f}%<br>"
+            "Status: %{customdata[6]}<extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        mapbox_style=map_style,
+        legend_title="Status",
+        margin=dict(l=0, r=0, t=55, b=0),
+    )
+
+    return fig
+
+
+def gerar_mapa_nf_individual(
+    mapa_ok,
+    map_style,
+    zoom,
+    center,
+    destacar_so_atrasos,
+):
+    base = mapa_ok.copy()
+
+    if destacar_so_atrasos:
+        base = base[base["Status"] == "Atrasado"].copy()
+
+    if base.empty:
+        return None, base
+
+    for col in ["NF", "Cliente", "Transportadora", "Representante"]:
+        if col not in base.columns:
+            base[col] = ""
+
+    # Distribuição visual mais suave para evitar sobreposição:
+    # espalha os pontos em círculos pequenos por cidade
+    base["ordem"] = base.groupby(["Cidade", "UF"]).cumcount()
+    base["angulo"] = (base["ordem"] % 12) * (2 * np.pi / 12)
+    base["anel"] = (base["ordem"] // 12) + 1
+
+    # Ajuste sutil para não deformar demais o mapa
+    base["lat_plot"] = base["lat"] + np.sin(base["angulo"]) * (0.045 * base["anel"])
+    base["lon_plot"] = base["lon"] + np.cos(base["angulo"]) * (0.045 * base["anel"])
+
+    fig = px.scatter_mapbox(
+        base,
+        lat="lat_plot",
+        lon="lon_plot",
+        color="Status",
+        color_discrete_map=STATUS_COLORS,
+        hover_name="Cidade",
+        hover_data={
+            "UF": True,
+            "NF": True,
+            "Cliente": True,
+            "Transportadora": True,
+            "Representante": True,
+            "Valor": ":,.2f",
+            "Vol": True,
+            "Dias": True,
+            "Status": True,
+            "lat_plot": False,
+            "lon_plot": False,
+        },
+        zoom=zoom,
+        center=center,
+        height=740,
+        title="Mapa por NF Individual",
+    )
+
+    fig.update_traces(
+        marker=dict(
+            size=9,
+            opacity=0.55,
+            line=dict(width=0.3, color="rgba(255,255,255,0.5)"),
+        ),
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "UF: %{customdata[0]}<br>"
+            "NF: %{customdata[1]}<br>"
+            "Cliente: %{customdata[2]}<br>"
+            "Transportadora: %{customdata[3]}<br>"
+            "Representante: %{customdata[4]}<br>"
+            "Valor: R$ %{customdata[5]:,.2f}<br>"
+            "Volume: %{customdata[6]}<br>"
+            "Dias: %{customdata[7]}<br>"
+            "Status: %{customdata[8]}<extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        mapbox_style=map_style,
+        legend_title="Status",
+        margin=dict(l=0, r=0, t=55, b=0),
+    )
+
+    return fig, base
+
+
+def exibir_kpis(df_filtrado):
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1.6])
+
+    col1.metric("Total NFs", f"{len(df_filtrado):,}".replace(",", "."))
+    col2.metric("UFs no filtro", int(df_filtrado["UF"].nunique()))
+    col3.metric("Cidades no filtro", int(df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0]))
+    col4.metric("Valor total", formatar_moeda_br(df_filtrado["Valor"].sum()))
+
+
+def exibir_insights(mapa_cidade, mapa_uf):
+    st.subheader("🧠 Inteligência de negócio")
+
+    col1, col2 = st.columns(2)
+
+    cidades_criticas = mapa_cidade[mapa_cidade["qtd_atrasadas"] > 0].copy()
+    cidades_criticas = cidades_criticas.sort_values(
+        ["qtd_atrasadas", "perc_atraso", "valor_total"],
+        ascending=[False, False, False]
+    ).head(5)
+
+    ufs_criticas = mapa_uf[mapa_uf["qtd_atrasadas"] > 0].copy()
+    ufs_criticas = ufs_criticas.sort_values(
+        ["qtd_atrasadas", "perc_atraso", "valor_total"],
+        ascending=[False, False, False]
+    ).head(5)
+
+    with col1:
+        st.markdown("**Top cidades com mais atraso**")
+        if cidades_criticas.empty:
+            st.success("Nenhuma cidade com atraso no filtro atual.")
+        else:
+            tabela = cidades_criticas[["Cidade", "UF", "qtd_atrasadas", "perc_atraso", "valor_total"]].copy()
+            tabela.columns = ["Cidade", "UF", "Qtd atrasadas", "% atraso", "Valor total"]
+            st.dataframe(tabela, use_container_width=True, hide_index=True)
+
+    with col2:
+        st.markdown("**Regiões críticas (UFs)**")
+        if ufs_criticas.empty:
+            st.success("Nenhuma UF com atraso no filtro atual.")
+        else:
+            tabela = ufs_criticas[["UF", "qtd_atrasadas", "perc_atraso", "valor_total"]].copy()
+            tabela.columns = ["UF", "Qtd atrasadas", "% atraso", "Valor total"]
+            st.dataframe(tabela, use_container_width=True, hide_index=True)
+
+
+# ============================================================
+# CARGA E PREPARAÇÃO
+# ============================================================
+df = carregar_dados()
+cidades = carregar_cidades()
+
+
+# ============================================================
+# FILTROS
+# ============================================================
 st.subheader("Filtros")
 
 base_filtros = df.copy()
-
 col1, col2, col3, col4 = st.columns(4)
 
-# estado inicial
 transportadoras_all = sorted([x for x in base_filtros["Transportadora"].dropna().unique() if x])
 representantes_all = sorted([x for x in base_filtros["Representante"].dropna().unique() if x])
 ufs_all = sorted([x for x in base_filtros["UF"].dropna().unique() if x])
 cidades_all = sorted([x for x in base_filtros["Cidade"].dropna().unique() if x])
 
 with col1:
-    transp_sel = st.multiselect(
-        "Transportadora",
-        transportadoras_all,
-        default=[]
-    )
+    transp_sel = st.multiselect("Transportadora", transportadoras_all, default=[])
 
-# restringe base conforme transportadora
 base_rep = base_filtros.copy()
 if transp_sel:
     base_rep = base_rep[base_rep["Transportadora"].isin(transp_sel)]
 
 with col2:
     representantes_disp = sorted([x for x in base_rep["Representante"].dropna().unique() if x])
-    rep_sel = st.multiselect(
-        "Representante",
-        representantes_disp,
-        default=[]
-    )
+    rep_sel = st.multiselect("Representante", representantes_disp, default=[])
 
-# restringe base conforme transportadora + representante
 base_uf = base_filtros.copy()
 if transp_sel:
     base_uf = base_uf[base_uf["Transportadora"].isin(transp_sel)]
@@ -98,13 +518,8 @@ if rep_sel:
 
 with col3:
     ufs_disp = sorted([x for x in base_uf["UF"].dropna().unique() if x])
-    uf_sel = st.multiselect(
-        "UF",
-        ufs_disp,
-        default=[]
-    )
+    uf_sel = st.multiselect("UF", ufs_disp, default=[])
 
-# restringe base conforme transportadora + representante + uf
 base_cidade = base_filtros.copy()
 if transp_sel:
     base_cidade = base_cidade[base_cidade["Transportadora"].isin(transp_sel)]
@@ -115,256 +530,188 @@ if uf_sel:
 
 with col4:
     cidades_disp = sorted([x for x in base_cidade["Cidade"].dropna().unique() if x])
-    cidade_sel = st.multiselect(
-        "Cidade",
-        cidades_disp,
-        default=[]
-    )
+    cidade_sel = st.multiselect("Cidade", cidades_disp, default=[])
 
-col5, col6 = st.columns(2)
+col5, col6, col7, col8 = st.columns([1.1, 1.4, 1.2, 1.2])
 
 with col5:
-    metricas = {
-        "Quantidade de NFs": "qtd_nfs",
-        "Valor Total": "valor_total",
-        "Volume Total": "vol_total",
-    }
-    metrica_label = st.selectbox("Métrica do mapa", list(metricas.keys()))
-    metrica = metricas[metrica_label]
+    metrica_label = st.selectbox("Métrica do mapa", list(METRICAS.keys()))
+    metrica = METRICAS[metrica_label]
 
 with col6:
     modo_mapa = st.radio(
         "Visualização",
-        ["Agrupado por cidade", "Cada NF"],
+        ["Agrupado por cidade", "Cada NF individual"],
         horizontal=True
     )
 
-# aplica filtros finais
-df_filtrado = base_filtros.copy()
+with col7:
+    destacar_so_atrasos = st.toggle("Mostrar só atrasos", value=False)
 
-if transp_sel:
-    df_filtrado = df_filtrado[df_filtrado["Transportadora"].isin(transp_sel)]
-if rep_sel:
-    df_filtrado = df_filtrado[df_filtrado["Representante"].isin(rep_sel)]
-if uf_sel:
-    df_filtrado = df_filtrado[df_filtrado["UF"].isin(uf_sel)]
-if cidade_sel:
-    df_filtrado = df_filtrado[df_filtrado["Cidade"].isin(cidade_sel)]
+with col8:
+    estilo_mapa_label = st.selectbox("Estilo do mapa", list(MAP_STYLES.keys()))
+    estilo_mapa = MAP_STYLES[estilo_mapa_label]
 
-# mensagem amigável se nada encontrado
+
+# ============================================================
+# FILTRO FINAL
+# ============================================================
+df_filtrado = aplicar_filtros(df, transp_sel, rep_sel, uf_sel, cidade_sel)
+
 if df_filtrado.empty:
-    st.warning("Nenhum registro encontrado com os filtros selecionados. Ajuste Transportadora, Representante, UF ou Cidade.")
-# =========================
+    st.warning("Nenhum registro encontrado com os filtros selecionados.")
+    st.stop()
+
+
+# ============================================================
 # KPIs
-# =========================
-colk1, colk2, colk3, colk4 = st.columns([1, 1, 1, 2])
+# ============================================================
+exibir_kpis(df_filtrado)
 
-colk1.metric("Cidades no filtro", df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0])
-colk2.metric("UFs no filtro", df_filtrado["UF"].nunique())
-colk3.metric("Total NFs", len(df_filtrado))
 
-with colk4:
-    st.markdown("**Valor das Notas**")
-    st.markdown(
-    f"""
-    <div style="
-        font-size: 32px;
-        font-weight: 700;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    ">
-        {formatar_moeda_br(df_filtrado['Valor'].sum())}
-    </div>
-    """,
-    unsafe_allow_html=True
+# ============================================================
+# AGREGAÇÕES E BASES DE MAPA
+# ============================================================
+mapa_base, mapa_ok, faltando = gerar_base_mapa(df_filtrado, cidades)
+mapa_uf = gerar_agregado_uf(df_filtrado)
+
+if mapa_ok.empty:
+    st.warning("Nenhuma cidade com coordenadas encontrada para os filtros selecionados.")
+    with st.expander("Ver cidades sem coordenadas"):
+        st.dataframe(faltando.sort_values(["UF", "Cidade"]), use_container_width=True, hide_index=True)
+    st.stop()
+
+mapa_cidade = gerar_agregado_cidade(mapa_ok)
+
+center = calcular_center(mapa_ok)
+zoom = calcular_zoom(mapa_ok, uf_sel, modo_mapa)
+
+
+# ============================================================
+# RESUMO OPERACIONAL
+# ============================================================
+st.divider()
+
+colr1, colr2, colr3, colr4 = st.columns(4)
+
+total_atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
+total_vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
+perc_atraso_total = percentual(total_atrasadas, len(df_filtrado))
+perc_coord = percentual(
+    mapa_ok[["Cidade", "UF"]].drop_duplicates().shape[0],
+    mapa_base[["Cidade", "UF"]].drop_duplicates().shape[0],
 )
-# =========================
+
+colr1.metric("NFs atrasadas", f"{total_atrasadas:,}".replace(",", "."))
+colr2.metric("Vence hoje", f"{total_vence_hoje:,}".replace(",", "."))
+colr3.metric("% atraso", f"{perc_atraso_total:.1f}%")
+colr4.metric("Cobertura geográfica", f"{perc_coord:.1f}%")
+
+with st.expander("Qualidade geográfica / cidades sem coordenadas"):
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Cidades com coordenadas", mapa_ok[["Cidade", "UF"]].drop_duplicates().shape[0])
+    c2.metric("Cidades sem coordenadas", faltando.shape[0])
+    c3.metric("Linhas aptas ao mapa", len(mapa_ok))
+
+    if not faltando.empty:
+        st.dataframe(
+            faltando.sort_values(["UF", "Cidade"]),
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+# ============================================================
+# INTELIGÊNCIA DE NEGÓCIO
+# ============================================================
+exibir_insights(mapa_cidade, mapa_uf)
+
+
+# ============================================================
 # MAPA POR UF
-# =========================
-mapa_uf = (
-    df_filtrado.groupby("UF", dropna=False)
-    .agg(
-        qtd_nfs=("NF", "count"),
-        valor_total=("Valor", "sum"),
-        vol_total=("Vol", "sum"),
-    )
-    .reset_index()
-)
+# ============================================================
+st.divider()
+st.subheader("🇧🇷 Mapa por UF")
 
-geojson_url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson"
-brasil_geojson = requests.get(geojson_url, timeout=30).json()
-
-fig_uf = px.choropleth(
-    mapa_uf,
-    geojson=brasil_geojson,
-    locations="UF",
-    featureidkey="properties.sigla",
-    color=metrica,
-    hover_name="UF",
-    hover_data={
-        "qtd_nfs": True,
-        "valor_total": ":,.2f",
-        "vol_total": True,
-    },
-    title=f"Mapa por UF - {metrica_label}"
-)
-fig_uf.update_geos(fitbounds="locations", visible=False)
+fig_uf = gerar_mapa_uf(mapa_uf, metrica, metrica_label)
 st.plotly_chart(fig_uf, use_container_width=True)
 
-st.subheader("Ranking por UF")
-ranking_uf = mapa_uf.sort_values(metrica, ascending=False)
-st.dataframe(ranking_uf, use_container_width=True)
+ranking_uf = mapa_uf.sort_values(metrica, ascending=False).copy()
+ranking_uf["valor_total_fmt"] = ranking_uf["valor_total"].apply(formatar_moeda_br)
 
-# =========================
-# MAPA POR CIDADE
-# =========================
+with st.expander("Ver ranking por UF"):
+    st.dataframe(
+        ranking_uf[["UF", "qtd_nfs", "valor_total_fmt", "vol_total", "qtd_atrasadas", "perc_atraso"]],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+# ============================================================
+# MAPA ANALÍTICO POR CIDADE / NF
+# ============================================================
 st.divider()
-st.divider()
-st.subheader("📍 Mapa por Cidade / NF")
+st.subheader("📍 Mapa Analítico")
 
-import numpy as np
+if modo_mapa == "Agrupado por cidade":
+    fig_cidade = gerar_mapa_cidade_agrupado(
+        mapa_cidade=mapa_cidade,
+        metrica=metrica,
+        metrica_label=metrica_label,
+        map_style=estilo_mapa,
+        zoom=zoom,
+        center=center,
+        destacar_so_atrasos=destacar_so_atrasos,
+    )
 
-# carregar coordenadas
-cidades = pd.read_csv("data/cidades.csv")
-cidades.columns = cidades.columns.str.strip()
-
-for col in ["Cidade", "UF"]:
-    cidades[col] = cidades[col].astype(str).apply(normalizar_texto)
-
-cidades["lat"] = pd.to_numeric(cidades["lat"], errors="coerce")
-cidades["lon"] = pd.to_numeric(cidades["lon"], errors="coerce")
-
-# filtro extra por UF no mapa
-df_mapa = df_filtrado.copy()
-
-# merge com base fixa
-mapa_base = df_mapa.merge(
-    cidades[["Cidade", "UF", "lat", "lon"]],
-    on=["Cidade", "UF"],
-    how="left"
-)
-
-faltando = mapa_base[mapa_base["lat"].isna()][["Cidade", "UF"]].drop_duplicates()
-encontradas = mapa_base[mapa_base["lat"].notna()][["Cidade", "UF"]].drop_duplicates()
-
-col_a, col_b, col_c = st.columns(3)
-col_a.metric("Cidades com coordenadas", len(encontradas))
-col_b.metric("Cidades sem coordenadas", len(faltando))
-col_c.metric("Linhas no mapa", len(mapa_base.dropna(subset=["lat", "lon"])))
-
-with st.expander("Ver cidades sem coordenadas"):
-    st.dataframe(faltando.sort_values(["UF", "Cidade"]), use_container_width=True)
-
-mapa_base = mapa_base.dropna(subset=["lat", "lon"]).copy()
-
-if mapa_base.empty:
-    st.warning("Nenhuma cidade com coordenadas encontrada para os filtros selecionados.")
-else:
-    # centro automático
-    center_lat = float(mapa_base["lat"].mean())
-    center_lon = float(mapa_base["lon"].mean())
-
-    if modo_mapa == "Agrupado por cidade":
-        mapa_cidade = (
-            mapa_base.groupby(["Cidade", "UF", "lat", "lon"], as_index=False)
-            .agg(
-                qtd_nfs=("NF", "count"),
-                valor_total=("Valor", "sum"),
-                vol_total=("Vol", "sum"),
-            )
-        )
-
-        fig_cidade = px.scatter_mapbox(
-    mapa_cidade,
-    lat="lat",
-    lon="lon",
-    size=metrica,
-    color=metrica,
-    color_continuous_scale="reds",  # 👈 AQUI
-            size_max=40,
-           zoom=5 if uf_sel and len(uf_sel) <= 2 else 3.8,
-            center={"lat": center_lat, "lon": center_lon},
-            height=650,
-            hover_name="Cidade",
-            hover_data={
-                "UF": True,
-                "qtd_nfs": True,
-                "valor_total": ":,.2f",
-                "vol_total": True,
-                "lat": False,
-                "lon": False,
-            },
-            title=f"Mapa por Cidade - {metrica_label}"
-        )
-
-        fig_cidade.update_layout(
-            mapbox_style="carto-positron",
-            margin=dict(l=0, r=0, t=50, b=0)
-        )
+    if fig_cidade is None:
+        st.warning("Nenhum ponto encontrado para exibir no modo agrupado com o filtro atual.")
+    else:
         st.plotly_chart(fig_cidade, use_container_width=True)
 
-        st.subheader("Ranking por Cidade")
-        ranking_cidade = mapa_cidade.sort_values(metrica, ascending=False)
-        st.dataframe(ranking_cidade, use_container_width=True)
+    ranking_cidade = mapa_cidade.copy()
+    if destacar_so_atrasos:
+        ranking_cidade = ranking_cidade[ranking_cidade["qtd_atrasadas"] > 0]
 
+    ranking_cidade = ranking_cidade.sort_values(
+        [metrica, "qtd_atrasadas", "perc_atraso"],
+        ascending=[False, False, False]
+    )
+
+    ranking_cidade["valor_total_fmt"] = ranking_cidade["valor_total"].apply(formatar_moeda_br)
+
+    with st.expander("Ver ranking por cidade"):
+        st.dataframe(
+            ranking_cidade[
+                ["Cidade", "UF", "qtd_nfs", "valor_total_fmt", "vol_total", "qtd_atrasadas", "perc_atraso", "status_mapa"]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+else:
+    fig_nf, mapa_nf = gerar_mapa_nf_individual(
+        mapa_ok=mapa_ok,
+        map_style=estilo_mapa,
+        zoom=zoom,
+        center=center,
+        destacar_so_atrasos=destacar_so_atrasos,
+    )
+
+    if fig_nf is None:
+        st.warning("Nenhuma NF encontrada para exibir no modo individual com o filtro atual.")
     else:
-        # Cada NF individualmente
-        mapa_nf = mapa_base.copy()
-
-        # garantir colunas para hover
-        if "NF" not in mapa_nf.columns:
-            mapa_nf["NF"] = ""
-        if "Cliente" not in mapa_nf.columns:
-            mapa_nf["Cliente"] = ""
-        if "Transportadora" not in mapa_nf.columns:
-            mapa_nf["Transportadora"] = ""
-        if "Representante" not in mapa_nf.columns:
-            mapa_nf["Representante"] = ""
-
-        # jitter leve para separar NFs da mesma cidade
-        mapa_nf["ordem"] = mapa_nf.groupby(["Cidade", "UF"]).cumcount()
-        mapa_nf["lat_plot"] = mapa_nf["lat"] + (mapa_nf["ordem"] % 5) * 0.03
-        mapa_nf["lon_plot"] = mapa_nf["lon"] + (mapa_nf["ordem"] // 5) * 0.03
-
-        fig_nf = px.scatter_mapbox(
-            mapa_nf,
-            lat="lat_plot",
-            lon="lon_plot",
-            size=np.full(len(mapa_nf), 14),
-            opacity=0.85,
-            color="Status",
-            zoom=3.8,
-            center={"lat": center_lat, "lon": center_lon},
-            height=700,
-            hover_name="Cidade",
-            hover_data={
-                "UF": True,
-                "NF": True,
-                "Cliente": True,
-                "Transportadora": True,
-                "Representante": True,
-                "Valor": ":,.2f",
-                "Vol": True,
-                "Dias": True,
-                "Status": True,
-                "lat_plot": False,
-                "lon_plot": False,
-            },
-            title="Mapa por NF individual"
-        )
-
-        fig_nf.update_traces(marker=dict(opacity=0.75))
-        fig_nf.update_layout(
-            mapbox_style="carto-positron",
-            margin=dict(l=0, r=0, t=50, b=0)
-        )
         st.plotly_chart(fig_nf, use_container_width=True)
 
-        st.subheader("Tabela das NFs no mapa")
+    with st.expander("Ver tabela detalhada das NFs no mapa"):
+        tabela_nf = mapa_nf[
+            ["NF", "Cidade", "UF", "Cliente", "Transportadora", "Representante", "Valor", "Vol", "Dias", "Status"]
+        ].copy()
+
+        tabela_nf["Valor"] = tabela_nf["Valor"].apply(formatar_moeda_br)
+
         st.dataframe(
-            mapa_nf[
-                ["NF", "Cidade", "UF", "Cliente", "Transportadora", "Representante", "Valor", "Vol", "Dias", "Status"]
-            ],
-            use_container_width=True
+            tabela_nf.sort_values(["UF", "Cidade", "Status"]),
+            use_container_width=True,
+            hide_index=True,
         )
