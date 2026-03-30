@@ -91,11 +91,14 @@ transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x
 selecionadas = st.multiselect(
     "Transportadora",
     transportadoras,
-    default=transportadoras
+    default=[],
+    placeholder="Selecione uma ou mais transportadoras"
 )
 
-df_filtrado = df[df["Transportadora"].isin(selecionadas)].copy()
-
+if selecionadas:
+    df_filtrado = df[df["Transportadora"].isin(selecionadas)].copy()
+else:
+    df_filtrado = df.copy()
 # =========================
 # KPIS
 # =========================
@@ -108,7 +111,7 @@ clientes = df_filtrado["Cliente"].nunique() if "Cliente" in df_filtrado.columns 
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1.5, 1, 1])
 
 with col1:
-    card_kpi("🚚 Transportadoras", str(total_transportadoras), tamanho="22px")
+    card_kpi("🚚 Transp.", str(total_transportadoras), tamanho="22px")
 
 with col2:
     card_kpi("📦 Total NFs", f"{total_nfs:,}".replace(",", "."), tamanho="22px")
