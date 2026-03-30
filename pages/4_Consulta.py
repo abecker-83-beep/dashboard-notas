@@ -13,6 +13,27 @@ from utils.load_data import load_data
 st.title("🔎 Consulta")
 st.caption("Consulta detalhada de notas com filtros, busca e resumo operacional.")
 
+st.markdown(
+    """
+    <style>
+    div[data-testid="metric-container"] {
+        overflow: visible !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        font-size: 20px !important;
+    }
+
+    div[data-testid="stMetricLabel"] {
+        white-space: nowrap !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ============================================================
 # ESTILO GLOBAL
@@ -324,13 +345,15 @@ perc_atraso = (atrasadas / total * 100) if total > 0 else 0
 classe_perc = "metric-green" if perc_atraso < 10 else "metric-yellow" if perc_atraso < 20 else "metric-red"
 
 # primeira linha
-r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns([1.0, 1.1, 1.1, 1.1, 1.8])
+r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns([1.0, 1.1, 1.1, 1.1, 2.5])
 
 metric_card(r1c1, "Notas", f"{total:,}".replace(",", "."), "metric-gray")
 metric_card(r1c2, "🔴 Atrasadas", f"{atrasadas:,}".replace(",", "."), "metric-red")
 metric_card(r1c3, "🟡 Vence hoje", f"{vence_hoje:,}".replace(",", "."), "metric-yellow")
 metric_card(r1c4, "🟢 No prazo", f"{no_prazo:,}".replace(",", "."), "metric-green")
-metric_card(r1c5, "Valor das Notas", formatar_moeda_br(valor_total), "metric-blue")
+valor_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+metric_card(r1c5, "Valor das Notas", valor_formatado, "metric-blue")
 
 st.markdown('<div class="spacer-8"></div>', unsafe_allow_html=True)
 
