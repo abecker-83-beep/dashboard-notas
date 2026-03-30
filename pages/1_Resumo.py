@@ -40,10 +40,9 @@ col1, col2, col3, col4, col5 = st.columns(5)
 
 col1.metric("Total NFs", total_notas)
 col2.metric("Valor Total", f"R$ {valor_total:,.2f}")
-col3.metric("Atrasadas", atrasadas)
-col4.metric("Vence Hoje", vence_hoje)
-col5.metric("No Prazo", no_prazo)
-
+col3.metric("🔴 Atrasadas", atrasadas, delta=f"{atrasadas}")
+col4.metric("🟡 Vence hoje", vence_hoje)
+col5.metric("🟢 No prazo", no_prazo)
 st.divider()
 
 st.subheader("Dados carregados")
