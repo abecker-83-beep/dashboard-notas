@@ -172,7 +172,7 @@ vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
 clientes = df_filtrado["Cliente"].nunique() if "Cliente" in df_filtrado.columns else 0
 perc_atraso = (atrasadas / total_nfs * 100) if total_nfs > 0 else 0
 
-col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1.5, 1, 1, 1])
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 
 with col1:
     card_kpi("🚚 Transp.", str(total_transportadoras), tamanho="22px")
@@ -182,15 +182,6 @@ with col2:
 
 with col3:
     card_kpi(
-        "💰 Valor Total",
-        formatar_moeda_br(valor_total),
-        cor_fundo="#eef6ff",
-        cor_texto="#0f172a",
-        tamanho="18px"
-    )
-
-with col4:
-    card_kpi(
         "🔴 Atrasadas",
         str(atrasadas),
         cor_fundo="#fff1f2",
@@ -198,7 +189,7 @@ with col4:
         tamanho="22px"
     )
 
-with col5:
+with col4:
     card_kpi(
         "🟡 Vence hoje",
         str(vence_hoje),
@@ -207,7 +198,7 @@ with col5:
         tamanho="22px"
     )
 
-with col6:
+with col5:
     card_kpi(
         "⚠️ % Atraso",
         f"{perc_atraso:.1f}%",
@@ -216,6 +207,32 @@ with col6:
         tamanho="22px"
     )
 
+st.markdown("<br>", unsafe_allow_html=True)
+
+st.markdown("**💰 Valor Total das Notas**")
+st.markdown(
+    f"""
+    <div style="
+        font-size: 34px;
+        font-weight: 700;
+        color: #0f172a;
+        background-color: #eef6ff;
+        border: 1px solid #dbeafe;
+        border-radius: 12px;
+        padding: 16px 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: fit-content;
+        min-width: 320px;
+    ">
+        {formatar_moeda_br(valor_total)}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
