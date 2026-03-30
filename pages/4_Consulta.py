@@ -43,23 +43,25 @@ def card_indicador(
     fonte_valor=18,
     mostrar_bolinha=False,
 ):
-    bolinha_html = ""
+    titulo_html = titulo
     if mostrar_bolinha:
-        bolinha_html = f"""
+        titulo_html = f"""
+        <span style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
             <span style="
                 display:inline-block;
                 width:10px;
                 height:10px;
                 border-radius:50%;
                 background:{cor};
-                margin-right:8px;
                 flex-shrink:0;
             "></span>
+            <span>{titulo}</span>
+        </span>
         """
 
     html = f"""
     <div style="
-        background-color:{fundo};
+        background:{fundo};
         border:1px solid {borda};
         border-radius:14px;
         padding:14px 16px;
@@ -71,34 +73,25 @@ def card_indicador(
         justify-content:space-between;
     ">
         <div style="
-            display:flex;
-            align-items:center;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
             font-size:14px;
             color:#475569;
             font-weight:500;
             line-height:1.2;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
         ">
-            {bolinha_html}
-            <span style="
-                white-space:nowrap;
-                overflow:hidden;
-                text-overflow:ellipsis;
-            ">
-                {titulo}
-            </span>
+            {titulo_html}
         </div>
 
         <div style="
             font-size:{fonte_valor}px;
             font-weight:700;
             color:{cor};
+            line-height:1.1;
             white-space:nowrap;
             overflow:hidden;
             text-overflow:ellipsis;
-            line-height:1.1;
         ">
             {valor}
         </div>
@@ -106,8 +99,6 @@ def card_indicador(
     """
 
     st.markdown(html, unsafe_allow_html=True)
-
-
 def detectar_coluna_data(df):
     candidatos = [
         "Data",
@@ -348,7 +339,6 @@ cor_perc = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else
 fundo_perc = "#F0FDF4" if perc_atraso < 10 else "#FFFBEB" if perc_atraso < 20 else "#FEF2F2"
 borda_perc = "#BBF7D0" if perc_atraso < 10 else "#FDE68A" if perc_atraso < 20 else "#FECACA"
 
-# Linha principal
 colr1, colr2, colr3, colr4, colr5 = st.columns([1.0, 1.15, 1.15, 1.15, 2.1])
 
 with colr1:
@@ -413,7 +403,6 @@ with colr5:
 
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# Linha secundária
 colp1, colp2, colp3 = st.columns([1.0, 1.1, 4.0])
 
 with colp1:
@@ -442,8 +431,7 @@ with colp2:
 
 with colp3:
     st.markdown("")
-
-
+    
 # ============================================================
 # TABELA DETALHADA
 # ============================================================
