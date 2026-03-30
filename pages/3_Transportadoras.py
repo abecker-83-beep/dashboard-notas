@@ -89,7 +89,7 @@ df["Status"] = df["Dias"].apply(
 # =========================
 st.subheader("Filtros")
 
-colf1, colf2 = st.columns(2)
+colf1, colf2, colf3, colf4 = st.columns(4)
 
 with colf1:
     transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x])
@@ -108,14 +108,48 @@ with colf2:
         placeholder="Selecione um ou mais status"
     )
 
-# aplica filtros
+base_rep = df.copy()
 if selecionadas:
-    df_filtrado = df[df["Transportadora"].isin(selecionadas)].copy()
-else:
-    df_filtrado = df.copy()
+    base_rep = base_rep[base_rep["Transportadora"].isin(selecionadas)]
+if status_sel:
+    base_rep = base_rep[base_rep["Status"].isin(status_sel)]
+
+with colf3:
+    representantes = sorted([x for x in base_rep["Representante"].dropna().unique() if x])
+    representante_sel = st.multiselect(
+        "Representante",
+        representantes,
+        default=[],
+        placeholder="Selecione um ou mais representantes"
+    )
+
+base_uf = base_rep.copy()
+if representante_sel:
+    base_uf = base_uf[base_uf["Representante"].isin(representante_sel)]
+
+with colf4:
+    ufs = sorted([x for x in base_uf["UF"].dropna().unique() if x])
+    uf_sel = st.multiselect(
+        "UF",
+        ufs,
+        default=[],
+        placeholder="Selecione uma ou mais UFs"
+    )
+
+# aplica filtros finais
+df_filtrado = df.copy()
+
+if selecionadas:
+    df_filtrado = df_filtrado[df_filtrado["Transportadora"].isin(selecionadas)]
 
 if status_sel:
     df_filtrado = df_filtrado[df_filtrado["Status"].isin(status_sel)]
+
+if representante_sel:
+    df_filtrado = df_filtrado[df_filtrado["Representante"].isin(representante_sel)]
+
+if uf_sel:
+    df_filtrado = df_filtrado[df_filtrado["UF"].isin(uf_sel)]
 
 # =========================
 # KPIS
