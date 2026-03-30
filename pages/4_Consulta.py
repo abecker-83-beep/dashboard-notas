@@ -8,10 +8,64 @@ from utils.load_data import load_data
 
 
 # ============================================================
-# CONFIGURAÇÕES GERAIS
+# CONFIGURAÇÃO
 # ============================================================
 st.title("🔎 Consulta")
 st.caption("Consulta detalhada de notas com filtros, busca e resumo operacional.")
+
+
+# ============================================================
+# ESTILO GLOBAL
+# ============================================================
+st.markdown(
+    """
+    <style>
+    div[data-testid="metric-container"] {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        padding: 14px 16px;
+        border-radius: 14px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        min-height: 96px;
+    }
+
+    div[data-testid="metric-container"] label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .metric-red div[data-testid="metric-container"] {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+    }
+
+    .metric-yellow div[data-testid="metric-container"] {
+        background: #FFFBEB;
+        border: 1px solid #FDE68A;
+    }
+
+    .metric-green div[data-testid="metric-container"] {
+        background: #F0FDF4;
+        border: 1px solid #BBF7D0;
+    }
+
+    .metric-blue div[data-testid="metric-container"] {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+    }
+
+    .metric-gray div[data-testid="metric-container"] {
+        background: #F8FAFC;
+        border: 1px solid #E5E7EB;
+    }
+
+    .spacer-8 { height: 8px; }
+    .spacer-12 { height: 12px; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # ============================================================
@@ -33,72 +87,6 @@ def normalizar_texto(valor: str) -> str:
     return valor
 
 
-def card_indicador(
-    titulo,
-    valor,
-    cor="#1f2937",
-    fundo="#ffffff",
-    borda="#e5e7eb",
-    altura=96,
-    fonte_valor=18,
-    mostrar_bolinha=False,
-):
-    titulo_html = titulo
-    if mostrar_bolinha:
-        titulo_html = f"""
-        <span style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
-            <span style="
-                display:inline-block;
-                width:10px;
-                height:10px;
-                border-radius:50%;
-                background:{cor};
-                flex-shrink:0;
-            "></span>
-            <span>{titulo}</span>
-        </span>
-        """
-
-    html = f"""
-    <div style="
-        background:{fundo};
-        border:1px solid {borda};
-        border-radius:14px;
-        padding:14px 16px;
-        min-height:{altura}px;
-        height:{altura}px;
-        box-shadow:0 1px 3px rgba(0,0,0,0.05);
-        display:flex;
-        flex-direction:column;
-        justify-content:space-between;
-    ">
-        <div style="
-            font-size:14px;
-            color:#475569;
-            font-weight:500;
-            line-height:1.2;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-        ">
-            {titulo_html}
-        </div>
-
-        <div style="
-            font-size:{fonte_valor}px;
-            font-weight:700;
-            color:{cor};
-            line-height:1.1;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-        ">
-            {valor}
-        </div>
-    </div>
-    """
-
-    st.markdown(html, unsafe_allow_html=True)
 def detectar_coluna_data(df):
     candidatos = [
         "Data",
@@ -128,7 +116,6 @@ def carregar_dados():
     df = load_data().copy()
     df.columns = df.columns.str.strip()
 
-    # Garante colunas principais
     for col in ["NF", "Cliente", "Cidade", "UF", "Representante", "Transportadora"]:
         df = garantir_coluna(df, col, "")
 
@@ -137,14 +124,10 @@ def carregar_dados():
     df = garantir_coluna(df, "Vol", 0)
     df = garantir_coluna(df, "Status", "")
 
-    # Normalização de texto
     for col in ["Cliente", "Cidade", "UF", "Representante", "Transportadora"]:
-        if col in df.columns:
-            df[col] = df[col].astype(str).fillna("").apply(normalizar_texto)
+        df[col] = df[col].astype(str).fillna("").apply(normalizar_texto)
 
     df["NF"] = df["NF"].astype(str).fillna("").str.strip()
-
-    # Numéricos
     df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
 
     df["Valor"] = (
@@ -156,19 +139,15 @@ def carregar_dados():
         .str.strip()
     )
     df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
-
     df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
 
-    # Status
     status_vazio = df["Status"].astype(str).str.strip().replace("", np.nan).isna()
-
     df["Status"] = np.where(
         status_vazio,
         df["Dias"].apply(lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")),
         df["Status"].astype(str).str.strip(),
     )
 
-    # Data
     col_data = detectar_coluna_data(df)
     if col_data:
         df[col_data] = pd.to_datetime(df[col_data], errors="coerce")
@@ -224,8 +203,15 @@ def aplicar_filtros(
     return base
 
 
+def metric_card(col, label, value, classe="metric-gray"):
+    with col:
+        st.markdown(f'<div class="{classe}">', unsafe_allow_html=True)
+        st.metric(label=label, value=value)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
 # ============================================================
-# CARGA DE DADOS
+# CARGA
 # ============================================================
 df, col_data = carregar_dados()
 
@@ -304,7 +290,7 @@ with col6:
 
 
 # ============================================================
-# APLICA FILTROS
+# FILTRO FINAL
 # ============================================================
 df_filtrado = aplicar_filtros(
     df=df,
@@ -324,7 +310,7 @@ if df_filtrado.empty:
 
 
 # ============================================================
-# RESUMO DA CONSULTA
+# RESUMO
 # ============================================================
 st.subheader("Resumo da consulta")
 
@@ -335,103 +321,29 @@ no_prazo = int((df_filtrado["Status"] == "No prazo").sum())
 valor_total = float(df_filtrado["Valor"].sum())
 perc_atraso = (atrasadas / total * 100) if total > 0 else 0
 
-cor_perc = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else "#DC2626"
-fundo_perc = "#F0FDF4" if perc_atraso < 10 else "#FFFBEB" if perc_atraso < 20 else "#FEF2F2"
-borda_perc = "#BBF7D0" if perc_atraso < 10 else "#FDE68A" if perc_atraso < 20 else "#FECACA"
+classe_perc = "metric-green" if perc_atraso < 10 else "metric-yellow" if perc_atraso < 20 else "metric-red"
 
-colr1, colr2, colr3, colr4, colr5 = st.columns([1.0, 1.15, 1.15, 1.15, 2.1])
+# primeira linha
+r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns([1.0, 1.1, 1.1, 1.1, 1.8])
 
-with colr1:
-    card_indicador(
-        "Notas",
-        f"{total:,}".replace(",", "."),
-        cor="#1f2937",
-        fundo="#F8FAFC",
-        borda="#E5E7EB",
-        altura=92,
-        fonte_valor=18,
-        mostrar_bolinha=False,
-    )
+metric_card(r1c1, "Notas", f"{total:,}".replace(",", "."), "metric-gray")
+metric_card(r1c2, "🔴 Atrasadas", f"{atrasadas:,}".replace(",", "."), "metric-red")
+metric_card(r1c3, "🟡 Vence hoje", f"{vence_hoje:,}".replace(",", "."), "metric-yellow")
+metric_card(r1c4, "🟢 No prazo", f"{no_prazo:,}".replace(",", "."), "metric-green")
+metric_card(r1c5, "Valor das Notas", formatar_moeda_br(valor_total), "metric-blue")
 
-with colr2:
-    card_indicador(
-        "Atrasadas",
-        f"{atrasadas:,}".replace(",", "."),
-        cor="#DC2626",
-        fundo="#FEF2F2",
-        borda="#FECACA",
-        altura=92,
-        fonte_valor=18,
-        mostrar_bolinha=True,
-    )
+st.markdown('<div class="spacer-8"></div>', unsafe_allow_html=True)
 
-with colr3:
-    card_indicador(
-        "Vence hoje",
-        f"{vence_hoje:,}".replace(",", "."),
-        cor="#D97706",
-        fundo="#FFFBEB",
-        borda="#FDE68A",
-        altura=92,
-        fonte_valor=18,
-        mostrar_bolinha=True,
-    )
+# segunda linha
+r2c1, r2c2, r2c3 = st.columns([1.0, 1.1, 3.9])
 
-with colr4:
-    card_indicador(
-        "No prazo",
-        f"{no_prazo:,}".replace(",", "."),
-        cor="#16A34A",
-        fundo="#F0FDF4",
-        borda="#BBF7D0",
-        altura=92,
-        fonte_valor=18,
-        mostrar_bolinha=True,
-    )
+metric_card(r2c1, "% atraso", f"{perc_atraso:.1f}%", classe_perc)
+metric_card(r2c2, "UFs no filtro", str(df_filtrado["UF"].nunique()), "metric-gray")
 
-with colr5:
-    card_indicador(
-        "Valor das Notas",
-        formatar_moeda_br(valor_total),
-        cor="#1D4ED8",
-        fundo="#EFF6FF",
-        borda="#BFDBFE",
-        altura=92,
-        fonte_valor=16,
-        mostrar_bolinha=False,
-    )
+with r2c3:
+    st.empty()
 
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-colp1, colp2, colp3 = st.columns([1.0, 1.1, 4.0])
-
-with colp1:
-    card_indicador(
-        "% atraso",
-        f"{perc_atraso:.1f}%",
-        cor=cor_perc,
-        fundo=fundo_perc,
-        borda=borda_perc,
-        altura=82,
-        fonte_valor=18,
-        mostrar_bolinha=False,
-    )
-
-with colp2:
-    card_indicador(
-        "UFs no filtro",
-        str(df_filtrado["UF"].nunique()),
-        cor="#1f2937",
-        fundo="#F8FAFC",
-        borda="#E5E7EB",
-        altura=82,
-        fonte_valor=18,
-        mostrar_bolinha=False,
-    )
-
-with colp3:
-    st.markdown("")
-    
 # ============================================================
 # TABELA DETALHADA
 # ============================================================
