@@ -39,9 +39,73 @@ def card_indicador(
     cor="#1f2937",
     fundo="#ffffff",
     borda="#e5e7eb",
-    altura=110,
-    fonte_valor=20,
+    altura=96,
+    fonte_valor=18,
+    mostrar_bolinha=False,
 ):
+    bolinha = f"""
+        <span style="
+            display:inline-block;
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            background:{cor};
+            margin-right:8px;
+            flex-shrink:0;
+        "></span>
+    """ if mostrar_bolinha else ""
+
+    st.markdown(
+        f"""
+        <div style="
+            background-color:{fundo};
+            border:1px solid {borda};
+            border-radius:14px;
+            padding:14px 16px;
+            min-height:{altura}px;
+            height:{altura}px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        ">
+            <div style="
+                display:flex;
+                align-items:center;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                font-size:14px;
+                color:#475569;
+                font-weight:500;
+                line-height:1.2;
+            ">
+                {bolinha}
+                <span style="
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                ">
+                    {titulo}
+                </span>
+            </div>
+
+            <div style="
+                font-size:{fonte_valor}px;
+                font-weight:700;
+                color:{cor};
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                line-height:1.1;
+            ">
+                {valor}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
     st.markdown(
         f"""
         <div style="
@@ -329,88 +393,100 @@ cor_perc = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else
 fundo_perc = "#F0FDF4" if perc_atraso < 10 else "#FFFBEB" if perc_atraso < 20 else "#FEF2F2"
 borda_perc = "#BBF7D0" if perc_atraso < 10 else "#FDE68A" if perc_atraso < 20 else "#FECACA"
 
-colr1, colr2, colr3, colr4, colr5 = st.columns([1, 1, 1, 1, 1.6])
+# linha principal
+col1, col2, col3, col4, col5 = st.columns([1.0, 1.15, 1.15, 1.15, 1.9])
 
-with colr1:
+with col1:
     card_indicador(
         "Notas",
         f"{total:,}".replace(",", "."),
         cor="#1f2937",
-        fundo="#F9FAFB",
+        fundo="#F8FAFC",
         borda="#E5E7EB",
-        altura=110,
+        altura=92,
         fonte_valor=18,
+        mostrar_bolinha=False,
     )
 
-with colr2:
+with col2:
     card_indicador(
-        "🔴 Atrasadas",
+        "Atrasadas",
         f"{atrasadas:,}".replace(",", "."),
         cor="#DC2626",
         fundo="#FEF2F2",
         borda="#FECACA",
-        altura=110,
+        altura=92,
         fonte_valor=18,
+        mostrar_bolinha=True,
     )
 
-with colr3:
+with col3:
     card_indicador(
-        "🟡 Vence hoje",
+        "Vence hoje",
         f"{vence_hoje:,}".replace(",", "."),
         cor="#D97706",
         fundo="#FFFBEB",
         borda="#FDE68A",
-        altura=110,
+        altura=92,
         fonte_valor=18,
+        mostrar_bolinha=True,
     )
 
-with colr4:
+with col4:
     card_indicador(
-        "🟢 No prazo",
+        "No prazo",
         f"{no_prazo:,}".replace(",", "."),
         cor="#16A34A",
         fundo="#F0FDF4",
         borda="#BBF7D0",
-        altura=110,
+        altura=92,
         fonte_valor=18,
+        mostrar_bolinha=True,
     )
 
-with colr5:
+with col5:
     card_indicador(
         "Valor das Notas",
         formatar_moeda_br(valor_total),
         cor="#1D4ED8",
         fundo="#EFF6FF",
         borda="#BFDBFE",
-        altura=110,
-        fonte_valor=16,
+        altura=92,
+        fonte_valor=15,
+        mostrar_bolinha=False,
     )
 
-st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-colp1, colp2, _ = st.columns([1, 1, 3.6])
+# linha secundária
+col6, col7, col8 = st.columns([1.0, 1.1, 4.0])
 
-with colp1:
+with col6:
     card_indicador(
         "% atraso",
         f"{perc_atraso:.1f}%",
         cor=cor_perc,
         fundo=fundo_perc,
         borda=borda_perc,
-        altura=95,
+        altura=82,
         fonte_valor=18,
+        mostrar_bolinha=False,
     )
 
-with colp2:
+with col7:
     card_indicador(
         "UFs no filtro",
         str(df_filtrado["UF"].nunique()),
         cor="#1f2937",
-        fundo="#F9FAFB",
+        fundo="#F8FAFC",
         borda="#E5E7EB",
-        altura=95,
+        altura=82,
         fonte_valor=18,
+        mostrar_bolinha=False,
     )
+
+with col8:
+    st.markdown("")
     
 # ============================================================
 # TABELA DETALHADA
