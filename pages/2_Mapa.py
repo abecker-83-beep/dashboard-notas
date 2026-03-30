@@ -14,6 +14,29 @@ from utils.load_data import load_data
 # ============================================================
 st.title("🗺️ Mapa V3")
 st.caption("Mapa operacional com visão analítica por UF, cidade e NF.")
+st.markdown(
+    """
+    <style>
+    div[data-testid="metric-container"] {
+        overflow: visible !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        font-size: 20px !important;
+    }
+
+    div[data-testid="stMetricLabel"] {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 STATUS_COLORS = {
@@ -74,12 +97,16 @@ def card_indicador(titulo, valor, cor="#1f2937", fundo="#ffffff", borda="#e5e7eb
                 {titulo}
             </div>
             <div style="
-                font-size: 20px;
-                font-weight: 700;
-                color: {cor};
-            ">
-                {valor}
-            </div>
+    font-size: 20px;
+    font-weight: 700;
+    color: {cor};
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.1;
+">
+    {valor}
+</div>
         </div>
         """,
         unsafe_allow_html=True
@@ -462,13 +489,14 @@ def gerar_mapa_nf_individual(
 
 
 def exibir_kpis(df_filtrado):
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1.6])
+  col1, col2, col3, col4 = st.columns([1, 1, 1, 2.3])
 
-    col1.metric("Total NFs", f"{len(df_filtrado):,}".replace(",", "."))
-    col2.metric("UFs no filtro", int(df_filtrado["UF"].nunique()))
-    col3.metric("Cidades no filtro", int(df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0]))
-    col4.metric("Valor total", formatar_moeda_br(df_filtrado["Valor"].sum()))
+   valor_total_mapa = f"R$ {df_filtrado['Valor'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+col1.metric("Total NFs", f"{len(df_filtrado):,}".replace(",", "."))
+col2.metric("UFs no filtro", int(df_filtrado["UF"].nunique()))
+col3.metric("Cidades no filtro", int(df_filtrado[["Cidade", "UF"]].drop_duplicates().shape[0]))
+col4.metric("Valor total", valor_total_mapa)
 
 def exibir_insights(mapa_cidade, mapa_uf):
     st.subheader("🧠 Inteligência de negócio")
