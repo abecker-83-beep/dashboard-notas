@@ -33,7 +33,15 @@ def normalizar_texto(valor: str) -> str:
     return valor
 
 
-def card_indicador(titulo, valor, cor="#1f2937", fundo="#ffffff", borda="#e5e7eb"):
+def card_indicador(
+    titulo,
+    valor,
+    cor="#1f2937",
+    fundo="#ffffff",
+    borda="#e5e7eb",
+    altura=110,
+    fonte_valor=20,
+):
     st.markdown(
         f"""
         <div style="
@@ -41,21 +49,28 @@ def card_indicador(titulo, valor, cor="#1f2937", fundo="#ffffff", borda="#e5e7eb
             border: 1px solid {borda};
             border-radius: 14px;
             padding: 16px 18px;
-            min-height: 110px;
+            min-height: {altura}px;
+            height: {altura}px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         ">
             <div style="
                 font-size: 14px;
                 color: #6b7280;
-                margin-bottom: 10px;
                 font-weight: 500;
+                margin-bottom: 8px;
             ">
                 {titulo}
             </div>
             <div style="
-                font-size: 20px;
+                font-size: {fonte_valor}px;
                 font-weight: 700;
                 color: {cor};
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             ">
                 {valor}
             </div>
@@ -314,15 +329,17 @@ cor_perc = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else
 fundo_perc = "#F0FDF4" if perc_atraso < 10 else "#FFFBEB" if perc_atraso < 20 else "#FEF2F2"
 borda_perc = "#BBF7D0" if perc_atraso < 10 else "#FDE68A" if perc_atraso < 20 else "#FECACA"
 
-colr1, colr2, colr3, colr4, colr5 = st.columns(5)
+colr1, colr2, colr3, colr4, colr5 = st.columns([1, 1, 1, 1, 1.6])
 
 with colr1:
     card_indicador(
-        "NFs encontradas",
+        "Notas",
         f"{total:,}".replace(",", "."),
         cor="#1f2937",
-        fundo="#f9fafb",
-        borda="#e5e7eb"
+        fundo="#F9FAFB",
+        borda="#E5E7EB",
+        altura=110,
+        fonte_valor=18,
     )
 
 with colr2:
@@ -331,7 +348,9 @@ with colr2:
         f"{atrasadas:,}".replace(",", "."),
         cor="#DC2626",
         fundo="#FEF2F2",
-        borda="#FECACA"
+        borda="#FECACA",
+        altura=110,
+        fonte_valor=18,
     )
 
 with colr3:
@@ -340,7 +359,9 @@ with colr3:
         f"{vence_hoje:,}".replace(",", "."),
         cor="#D97706",
         fundo="#FFFBEB",
-        borda="#FDE68A"
+        borda="#FDE68A",
+        altura=110,
+        fonte_valor=18,
     )
 
 with colr4:
@@ -349,7 +370,9 @@ with colr4:
         f"{no_prazo:,}".replace(",", "."),
         cor="#16A34A",
         fundo="#F0FDF4",
-        borda="#BBF7D0"
+        borda="#BBF7D0",
+        altura=110,
+        fonte_valor=18,
     )
 
 with colr5:
@@ -358,12 +381,14 @@ with colr5:
         formatar_moeda_br(valor_total),
         cor="#1D4ED8",
         fundo="#EFF6FF",
-        borda="#BFDBFE"
+        borda="#BFDBFE",
+        altura=110,
+        fonte_valor=16,
     )
 
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-colp1, colp2, colp3 = st.columns([1, 1, 3])
+colp1, colp2, _ = st.columns([1, 1, 3.6])
 
 with colp1:
     card_indicador(
@@ -371,7 +396,9 @@ with colp1:
         f"{perc_atraso:.1f}%",
         cor=cor_perc,
         fundo=fundo_perc,
-        borda=borda_perc
+        borda=borda_perc,
+        altura=95,
+        fonte_valor=18,
     )
 
 with colp2:
@@ -379,14 +406,12 @@ with colp2:
         "UFs no filtro",
         str(df_filtrado["UF"].nunique()),
         cor="#1f2937",
-        fundo="#f9fafb",
-        borda="#e5e7eb"
+        fundo="#F9FAFB",
+        borda="#E5E7EB",
+        altura=95,
+        fonte_valor=18,
     )
-
-with colp3:
-    st.markdown("")
-
-
+    
 # ============================================================
 # TABELA DETALHADA
 # ============================================================
