@@ -236,15 +236,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# DESTAQUE
+# DESTAQUE PERFORMANCE
 # =========================
-nf_por_transp = (
-    df_filtrado.groupby("Transportadora")
-    .size()
-    .reset_index(name="Qtd NFs")
-    .sort_values("Qtd NFs", ascending=False)
-)
-
 performance = (
     df_filtrado
     .groupby("Transportadora")
@@ -259,7 +252,7 @@ performance["perc_atraso"] = (
     performance["atrasadas"] / performance["total_nfs"] * 100
 )
 
-# evita distorção (transportadora com 1 NF)
+# evita distorção (mínimo de volume)
 performance = performance[performance["total_nfs"] >= 10]
 
 if not performance.empty:
@@ -267,21 +260,24 @@ if not performance.empty:
     melhor = performance.sort_values("perc_atraso").iloc[0]
     pior = performance.sort_values("perc_atraso", ascending=False).iloc[0]
 
-    st.success(
-        f"🏆 Melhor performance: **{melhor['Transportadora']}** "
-        f"({melhor['perc_atraso']:.1f}% atraso • {melhor['total_nfs']} NFs)"
-    )
+    col_perf1, col_perf2 = st.columns(2)
 
-    st.error(
-        f"⚠️ Pior performance: **{pior['Transportadora']}** "
-        f"({pior['perc_atraso']:.1f}% atraso • {pior['total_nfs']} NFs)"
-    )
+    with col_perf1:
+        st.success(
+            f"🏆 Melhor performance\n\n"
+            f"**{melhor['Transportadora']}**\n\n"
+            f"{melhor['perc_atraso']:.1f}% atraso • {melhor['total_nfs']} NFs"
+        )
+
+    with col_perf2:
+        st.error(
+            f"⚠️ Pior performance\n\n"
+            f"**{pior['Transportadora']}**\n\n"
+            f"{pior['perc_atraso']:.1f}% atraso • {pior['total_nfs']} NFs"
+        )
 
 else:
     st.info("Sem dados suficientes para análise de performance")
-    
-else:
-    st.info("Sem dados suficientes para calcular performance")
 
 # =========================
 # AGRUPAMENTOS
