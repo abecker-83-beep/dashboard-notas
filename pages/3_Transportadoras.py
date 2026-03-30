@@ -143,6 +143,20 @@ with col5:
         tamanho="22px"
     )
 
+with col6:
+    card_kpi(
+        "⚠️ % Atraso",
+        f"{perc_atraso:.1f}%",
+        cor_fundo="#fff7ed",
+        cor_texto="#c2410c",
+        tamanho="22px"
+    )
+
+top_transp = nf_por_transp.iloc[0]["Transportadora"] if not nf_por_transp.empty else "-"
+top_qtd = nf_por_transp.iloc[0]["Qtd NFs"] if not nf_por_transp.empty else 0
+
+st.info(f"🏆 Top transportadora: **{top_transp}** ({top_qtd} NFs)")
+
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
