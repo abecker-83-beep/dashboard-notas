@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
-from utils.load_data import load_data
 import unicodedata
 import re
+from utils.load_data import load_data
 
 
 # =========================
@@ -21,8 +21,18 @@ def formatar_moeda_br(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def cor_status(val):
+    if val == "Atrasado":
+        return "background-color: #ffcccc; color: #b00020;"
+    elif val == "Vence hoje":
+        return "background-color: #fff3cd; color: #856404;"
+    elif val == "No prazo":
+        return "background-color: #d4edda; color: #155724;"
+    return ""
+
+
 # =========================
-# CONFIG PAGINA
+# PAGINA
 # =========================
 st.title("🔎 Consulta")
 st.caption("Consulta detalhada das notas fiscais")
@@ -45,25 +55,28 @@ for col in colunas_texto:
     if col in df.columns:
         df[col] = df[col].astype(str).str.strip()
 
-# colunas normalizadas para filtro/busca
+# colunas normalizadas para filtro
 for col in ["Cliente", "Cidade", "UF", "Transportadora", "Ocorrência", "Representante"]:
     if col in df.columns:
         df[f"{col}_norm"] = df[col].apply(normalizar_texto)
 
-# numéricos
-df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
+# numericos
+if "Dias" in df.columns:
+    df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
 
-df["Valor"] = (
-    df["Valor"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
-)
-df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
+if "Valor" in df.columns:
+    df["Valor"] = (
+        df["Valor"]
+        .astype(str)
+        .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.strip()
+    )
+    df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
 
-df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
+if "Vol" in df.columns:
+    df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
 
 # datas
 for col in ["Emissão", "Prev. Entrega", "Coleta", "Emissão CTE"]:
@@ -96,28 +109,28 @@ base = df.copy()
 col4, col5, col6, col7 = st.columns(4)
 
 with col4:
-    transportadoras = sorted(base["Transportadora_norm"].dropna().unique())
+    transportadoras = sorted([x for x in base["Transportadora_norm"].dropna().unique() if x])
     transportadora_sel = st.multiselect("Transportadora", transportadoras, default=[])
 
 if transportadora_sel:
     base = base[base["Transportadora_norm"].isin(transportadora_sel)]
 
 with col5:
-    representantes = sorted(base["Representante_norm"].dropna().unique())
+    representantes = sorted([x for x in base["Representante_norm"].dropna().unique() if x])
     representante_sel = st.multiselect("Representante", representantes, default=[])
 
 if representante_sel:
     base = base[base["Representante_norm"].isin(representante_sel)]
 
 with col6:
-    ufs = sorted(base["UF_norm"].dropna().unique())
+    ufs = sorted([x for x in base["UF_norm"].dropna().unique() if x])
     uf_sel = st.multiselect("UF", ufs, default=[])
 
 if uf_sel:
     base = base[base["UF_norm"].isin(uf_sel)]
 
 with col7:
-    cidades = sorted(base["Cidade_norm"].dropna().unique())
+    cidades = sorted([x for x in base["Cidade_norm"].dropna().unique() if x])
     cidade_sel = st.multiselect("Cidade", cidades, default=[])
 
 if cidade_sel:
@@ -126,7 +139,7 @@ if cidade_sel:
 col8, col9, col10 = st.columns(3)
 
 with col8:
-    ocorrencias = sorted(base["Ocorrência_norm"].dropna().unique())
+    ocorrencias = sorted([x for x in base["Ocorrência_norm"].dropna().unique() if x])
     ocorrencia_sel = st.multiselect("Ocorrência", ocorrencias, default=[])
 
 if ocorrencia_sel:
@@ -167,7 +180,7 @@ if campo_data in base.columns:
             ]
 
 # =========================
-# BUSCAS TEXTUAIS
+# BUSCAS
 # =========================
 if busca_nf:
     base = base[base["NF"].astype(str).str.contains(busca_nf.strip(), case=False, na=False)]
@@ -189,8 +202,8 @@ st.subheader("Resumo da consulta")
 colk1, colk2, colk3, colk4 = st.columns([1, 1, 1, 2])
 
 colk1.metric("NFs encontradas", len(df_filtrado))
-colk2.metric("Atrasadas", int((df_filtrado["Status"] == "Atrasado").sum()))
-colk3.metric("No prazo", int((df_filtrado["Status"] == "No prazo").sum()))
+colk2.metric("🔴 Atrasadas", int((df_filtrado["Status"] == "Atrasado").sum()))
+colk3.metric("🟢 No prazo", int((df_filtrado["Status"] == "No prazo").sum()))
 
 with colk4:
     st.markdown("**Valor das Notas**")
@@ -224,7 +237,11 @@ colunas_exibir = [c for c in colunas_exibir if c in df_filtrado.columns]
 
 tabela = df_filtrado[colunas_exibir].copy()
 
-# formatacoes visuais
+# ordenacao pelos maiores atrasos
+if "Dias" in tabela.columns:
+    tabela = tabela.sort_values(by="Dias", ascending=False)
+
+# formatacoes
 for col in ["Emissão", "Prev. Entrega", "Coleta", "Emissão CTE"]:
     if col in tabela.columns:
         tabela[col] = tabela[col].dt.strftime("%d/%m/%Y")
@@ -235,7 +252,11 @@ if "Valor" in tabela.columns:
 if "Vol" in tabela.columns:
     tabela["Vol"] = tabela["Vol"].fillna(0)
 
-st.dataframe(tabela, use_container_width=True, hide_index=True)
+st.dataframe(
+    tabela.style.applymap(cor_status, subset=["Status"]),
+    use_container_width=True,
+    hide_index=True
+)
 
 # =========================
 # EXPORTACAO
@@ -248,3 +269,5 @@ st.download_button(
     file_name="consulta_notas.csv",
     mime="text/csv"
 )
+  
+
