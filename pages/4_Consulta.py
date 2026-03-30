@@ -199,27 +199,51 @@ df_filtrado = base.copy()
 # =========================
 st.subheader("Resumo da consulta")
 
-colk1, colk2, colk3, colk4 = st.columns([1, 1, 1, 2])
+col1, col2, col3, col4 = st.columns(4)
 
-colk1.metric("NFs encontradas", len(df_filtrado))
-colk2.metric("🔴 Atrasadas", int((df_filtrado["Status"] == "Atrasado").sum()))
-colk3.metric("🟢 No prazo", int((df_filtrado["Status"] == "No prazo").sum()))
+with col1:
+    card_indicador(
+        "NFs encontradas",
+        f"{total:,}".replace(",", "."),
+        cor="#1f2937",
+        fundo="#f9fafb",
+        borda="#e5e7eb"
+    )
 
-with colk4:
-    st.markdown("**Valor das Notas**")
-    st.markdown(
-        f"""
-        <div style="
-            font-size: 32px;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        ">
-            {formatar_moeda_br(df_filtrado["Valor"].sum())}
-        </div>
-        """,
-        unsafe_allow_html=True
+with col2:
+    card_indicador(
+        "🔴 Atrasadas",
+        f"{atrasadas:,}".replace(",", "."),
+        cor="#DC2626",
+        fundo="#FEF2F2",
+        borda="#FECACA"
+    )
+
+with col3:
+    card_indicador(
+        "🟢 No prazo",
+        f"{no_prazo:,}".replace(",", "."),
+        cor="#16A34A",
+        fundo="#F0FDF4",
+        borda="#BBF7D0"
+    )
+
+with col4:
+    card_indicador(
+        "Valor das Notas",
+        formatar_moeda_br(valor_total),
+        cor="#1d4ed8",
+        fundo="#eff6ff",
+        borda="#bfdbfe"
+    )
+
+with col5:
+    card_indicador(
+        "% atraso",
+        f"{perc_atraso:.1f}%",
+        cor="#DC2626" if perc_atraso > 20 else "#D97706" if perc_atraso > 10 else "#16A34A",
+        fundo="#FEF2F2" if perc_atraso > 20 else "#FFFBEB" if perc_atraso > 10 else "#F0FDF4",
+        borda="#FECACA" if perc_atraso > 20 else "#FDE68A" if perc_atraso > 10 else "#BBF7D0"
     )
 
 # =========================
