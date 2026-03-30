@@ -156,6 +156,47 @@ def metric_card(col, label, value, classe="metric-gray"):
         st.markdown("</div>", unsafe_allow_html=True)
 
 
+def card_kpi(titulo, valor, cor_fundo="#f8f9fa", cor_texto="#1f2937", tamanho="24px", borda="#e5e7eb"):
+    st.markdown(
+        f"""
+        <div style="
+            background: {cor_fundo};
+            border: 1px solid {borda};
+            border-radius: 16px;
+            padding: 16px 18px;
+            min-height: 105px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        ">
+            <div style="
+                font-size: 13px;
+                color: #6b7280;
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: visible;
+                text-overflow: unset;
+            ">
+                {titulo}
+            </div>
+            <div style="
+                font-size: {tamanho};
+                font-weight: 700;
+                color: {cor_texto};
+                line-height: 1.1;
+                white-space: nowrap;
+                overflow: visible;
+                text-overflow: unset;
+            ">
+                {valor}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 @st.cache_data(show_spinner=False)
 def carregar_dados():
     df = load_data().copy()
@@ -438,7 +479,7 @@ with col_res1:
                 "% Frete sobre Notas",
             ],
             "Valor": [
-                formatar_moeda_br(valor_notas),
+                formatar_moeda_br(valor_total),
                 formatar_moeda_br(valor_frete),
                 f"{perc_frete:.2f}%",
             ],
@@ -457,7 +498,7 @@ with col_res2:
                 "No prazo",
             ],
             "Valor": [
-                f"{total_nfs:,}".replace(",", "."),
+                f"{total_notas:,}".replace(",", "."),
                 f"{atrasadas:,}".replace(",", "."),
                 f"{vence_hoje:,}".replace(",", "."),
                 f"{no_prazo:,}".replace(",", "."),
@@ -494,7 +535,7 @@ with g2:
     financeiro_df = pd.DataFrame(
         {
             "Indicador": ["Valor das Notas", "Valor de Frete"],
-            "Valor": [valor_notas, valor_frete],
+            "Valor": [valor_total, valor_frete],
         }
     )
     fig_fin = px.bar(
