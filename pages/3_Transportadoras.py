@@ -245,10 +245,43 @@ nf_por_transp = (
     .sort_values("Qtd NFs", ascending=False)
 )
 
-top_transp = nf_por_transp.iloc[0]["Transportadora"] if not nf_por_transp.empty else "-"
-top_qtd = int(nf_por_transp.iloc[0]["Qtd NFs"]) if not nf_por_transp.empty else 0
+performance = (
+    df_filtrado
+    .groupby("Transportadora")
+    .agg(
+        total_nfs=("NF", "count"),
+        atrasadas=("Status", lambda x: (x == "Atrasado").sum())
+    )
+    .reset_index()
+)
 
-st.info(f"🏆 Top transportadora: **{top_transp}** ({top_qtd} NFs)")
+performance["perc_atraso"] = (
+    performance["atrasadas"] / performance["total_nfs"] * 100
+)
+
+# evita distorção (transportadora com 1 NF)
+performance = performance[performance["total_nfs"] >= 10]
+
+if not performance.empty:
+
+    melhor = performance.sort_values("perc_atraso").iloc[0]
+    pior = performance.sort_values("perc_atraso", ascending=False).iloc[0]
+
+    st.success(
+        f"🏆 Melhor performance: **{melhor['Transportadora']}** "
+        f"({melhor['perc_atraso']:.1f}% atraso • {melhor['total_nfs']} NFs)"
+    )
+
+    st.error(
+        f"⚠️ Pior performance: **{pior['Transportadora']}** "
+        f"({pior['perc_atraso']:.1f}% atraso • {pior['total_nfs']} NFs)"
+    )
+
+else:
+    st.info("Sem dados suficientes para análise de performance")
+    
+else:
+    st.info("Sem dados suficientes para calcular performance")
 
 # =========================
 # AGRUPAMENTOS
