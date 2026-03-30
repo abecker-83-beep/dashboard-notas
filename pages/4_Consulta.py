@@ -347,6 +347,51 @@ with r2c3:
 # ============================================================
 # TABELA DETALHADA
 # ============================================================
+def colorir_status_linha(row):
+    status = str(row.get("Status", "")).strip()
+
+    if "Atrasado" in status:
+        return ["background-color: #FEF2F2; color: #991B1B;"] * len(row)
+    elif "Vence hoje" in status:
+        return ["background-color: #FFFBEB; color: #92400E;"] * len(row)
+    elif "No prazo" in status:
+        return ["background-color: #F0FDF4; color: #166534;"] * len(row)
+
+    return [""] * len(row)
+
+def colorir_status_linha(row):
+    status = str(row.get("Status", "")).strip()
+
+    if status == "Atrasado":
+        return ["background-color: #FEF2F2; color: #991B1B;"] * len(row)
+    elif status == "Vence hoje":
+        return ["background-color: #FFFBEB; color: #92400E;"] * len(row)
+    elif status == "No prazo":
+        return ["background-color: #F0FDF4; color: #166534;"] * len(row)
+
+    return [""] * len(row)
+
+def formatar_status(valor):
+    valor = str(valor).strip()
+    if valor == "Atrasado":
+        return "🔴 Atrasado"
+    elif valor == "Vence hoje":
+        return "🟡 Vence hoje"
+    elif valor == "No prazo":
+        return "🟢 No prazo"
+    return valor
+
+def formatar_status(valor):
+    valor = str(valor).strip()
+    if valor == "Atrasado":
+        return "🔴 Atrasado"
+    elif valor == "Vence hoje":
+        return "🟡 Vence hoje"
+    elif valor == "No prazo":
+        return "🟢 No prazo"
+    return valor
+
+
 st.subheader("📋 Tabela detalhada")
 
 colunas_preferidas = [
@@ -396,9 +441,16 @@ if col_data and col_data in df_filtrado.columns:
 
 tabela = tabela.sort_values(colunas_sort, ascending=ascending)
 tabela = tabela.drop(columns=[c for c in ["_ordem_status", "_data_sort"] if c in tabela.columns])
+if "Status" in tabela.columns:
+    tabela["Status"] = tabela["Status"].apply(formatar_status)
+
+if "Status" in tabela.columns:
+    tabela["Status"] = tabela["Status"].apply(formatar_status)
+
+tabela_estilizada = tabela.style.apply(colorir_status_linha, axis=1)
 
 st.dataframe(
-    tabela,
+    tabela_estilizada,
     use_container_width=True,
     hide_index=True
 )
