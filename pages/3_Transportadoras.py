@@ -169,7 +169,6 @@ total_nfs = len(df_filtrado)
 valor_total = df_filtrado["Valor"].sum() if "Valor" in df_filtrado.columns else 0
 atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
 vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
-clientes = df_filtrado["Cliente"].nunique() if "Cliente" in df_filtrado.columns else 0
 perc_atraso = (atrasadas / total_nfs * 100) if total_nfs > 0 else 0
 
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
@@ -233,7 +232,6 @@ st.markdown(
 )
 
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
 # DESTAQUE PERFORMANCE
@@ -252,11 +250,9 @@ performance["perc_atraso"] = (
     performance["atrasadas"] / performance["total_nfs"] * 100
 )
 
-# evita distorção (mínimo de volume)
 performance = performance[performance["total_nfs"] >= 10]
 
 if not performance.empty:
-
     melhor = performance.sort_values("perc_atraso").iloc[0]
     pior = performance.sort_values("perc_atraso", ascending=False).iloc[0]
 
@@ -275,13 +271,21 @@ if not performance.empty:
             f"**{pior['Transportadora']}**\n\n"
             f"{pior['perc_atraso']:.1f}% atraso • {pior['total_nfs']} NFs"
         )
-
 else:
     st.info("Sem dados suficientes para análise de performance")
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
 # AGRUPAMENTOS
 # =========================
+nf_por_transp = (
+    df_filtrado.groupby("Transportadora")
+    .size()
+    .reset_index(name="Qtd NFs")
+    .sort_values("Qtd NFs", ascending=False)
+)
+
 valor_por_transp = (
     df_filtrado.groupby("Transportadora")["Valor"]
     .sum()
