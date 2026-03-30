@@ -43,105 +43,69 @@ def card_indicador(
     fonte_valor=18,
     mostrar_bolinha=False,
 ):
-    bolinha = f"""
-        <span style="
-            display:inline-block;
-            width:10px;
-            height:10px;
-            border-radius:50%;
-            background:{cor};
-            margin-right:8px;
-            flex-shrink:0;
-        "></span>
-    """ if mostrar_bolinha else ""
+    bolinha_html = ""
+    if mostrar_bolinha:
+        bolinha_html = f"""
+            <span style="
+                display:inline-block;
+                width:10px;
+                height:10px;
+                border-radius:50%;
+                background:{cor};
+                margin-right:8px;
+                flex-shrink:0;
+            "></span>
+        """
 
-    st.markdown(
-        f"""
+    html = f"""
+    <div style="
+        background-color:{fundo};
+        border:1px solid {borda};
+        border-radius:14px;
+        padding:14px 16px;
+        min-height:{altura}px;
+        height:{altura}px;
+        box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+    ">
         <div style="
-            background-color:{fundo};
-            border:1px solid {borda};
-            border-radius:14px;
-            padding:14px 16px;
-            min-height:{altura}px;
-            height:{altura}px;
-            box-shadow:0 1px 3px rgba(0,0,0,0.05);
             display:flex;
-            flex-direction:column;
-            justify-content:space-between;
+            align-items:center;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            font-size:14px;
+            color:#475569;
+            font-weight:500;
+            line-height:1.2;
         ">
-            <div style="
-                display:flex;
-                align-items:center;
+            {bolinha_html}
+            <span style="
                 white-space:nowrap;
                 overflow:hidden;
                 text-overflow:ellipsis;
-                font-size:14px;
-                color:#475569;
-                font-weight:500;
-                line-height:1.2;
-            ">
-                {bolinha}
-                <span style="
-                    white-space:nowrap;
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                ">
-                    {titulo}
-                </span>
-            </div>
-
-            <div style="
-                font-size:{fonte_valor}px;
-                font-weight:700;
-                color:{cor};
-                white-space:nowrap;
-                overflow:hidden;
-                text-overflow:ellipsis;
-                line-height:1.1;
-            ">
-                {valor}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    st.markdown(
-        f"""
-        <div style="
-            background-color: {fundo};
-            border: 1px solid {borda};
-            border-radius: 14px;
-            padding: 16px 18px;
-            min-height: {altura}px;
-            height: {altura}px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        ">
-            <div style="
-                font-size: 14px;
-                color: #6b7280;
-                font-weight: 500;
-                margin-bottom: 8px;
             ">
                 {titulo}
-            </div>
-            <div style="
-                font-size: {fonte_valor}px;
-                font-weight: 700;
-                color: {cor};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            ">
-                {valor}
-            </div>
+            </span>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+
+        <div style="
+            font-size:{fonte_valor}px;
+            font-weight:700;
+            color:{cor};
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            line-height:1.1;
+        ">
+            {valor}
+        </div>
+    </div>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def detectar_coluna_data(df):
@@ -154,6 +118,7 @@ def detectar_coluna_data(df):
         "Data Emissao",
         "Emissao",
         "Data NF",
+        "Data Faturamento",
     ]
     for col in candidatos:
         if col in df.columns:
@@ -172,20 +137,20 @@ def carregar_dados():
     df = load_data().copy()
     df.columns = df.columns.str.strip()
 
-    # Garante colunas mais comuns
-    for col in ["NF", "Cliente", "Cidade", "UF", "Representante", "Transportadora", "Status"]:
+    # Garante colunas principais
+    for col in ["NF", "Cliente", "Cidade", "UF", "Representante", "Transportadora"]:
         df = garantir_coluna(df, col, "")
 
     df = garantir_coluna(df, "Dias", 0)
     df = garantir_coluna(df, "Valor", 0)
     df = garantir_coluna(df, "Vol", 0)
+    df = garantir_coluna(df, "Status", "")
 
     # Normalização de texto
-    for col in ["Cidade", "UF", "Representante", "Transportadora", "Cliente", "Status"]:
+    for col in ["Cliente", "Cidade", "UF", "Representante", "Transportadora"]:
         if col in df.columns:
             df[col] = df[col].astype(str).fillna("").apply(normalizar_texto)
 
-    # NF como string
     df["NF"] = df["NF"].astype(str).fillna("").str.strip()
 
     # Numéricos
@@ -203,28 +168,20 @@ def carregar_dados():
 
     df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
 
-    # Status fallback
-    if "Status" not in df.columns or df["Status"].replace("", np.nan).isna().all():
-        df["Status"] = df["Dias"].apply(
-            lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
-        )
-    else:
-        df["Status"] = (
-            df["Status"]
-            .astype(str)
-            .str.strip()
-            .replace("", np.nan)
-            .fillna(
-                df["Dias"].apply(
-                    lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
-                )
-            )
-        )
+    # Status
+    status_vazio = df["Status"].astype(str).str.strip().replace("", np.nan).isna()
+
+    df["Status"] = np.where(
+        status_vazio,
+        df["Dias"].apply(lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")),
+        df["Status"].astype(str).str.strip(),
+    )
 
     # Data
     col_data = detectar_coluna_data(df)
     if col_data:
         df[col_data] = pd.to_datetime(df[col_data], errors="coerce")
+
     return df, col_data
 
 
@@ -241,7 +198,6 @@ def aplicar_filtros(
 ):
     base = df.copy()
 
-    # Filtro por período
     if col_data and periodo and len(periodo) == 2:
         dt_ini = pd.to_datetime(periodo[0], errors="coerce")
         dt_fim = pd.to_datetime(periodo[1], errors="coerce")
@@ -278,7 +234,7 @@ def aplicar_filtros(
 
 
 # ============================================================
-# CARGA
+# CARGA DE DADOS
 # ============================================================
 df, col_data = carregar_dados()
 
@@ -292,7 +248,6 @@ if df.empty:
 # ============================================================
 st.subheader("Filtros")
 
-# período
 if col_data and df[col_data].notna().any():
     data_min = df[col_data].min().date()
     data_max = df[col_data].max().date()
@@ -358,7 +313,7 @@ with col6:
 
 
 # ============================================================
-# APLICAÇÃO DOS FILTROS
+# APLICA FILTROS
 # ============================================================
 df_filtrado = aplicar_filtros(
     df=df,
@@ -393,10 +348,10 @@ cor_perc = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else
 fundo_perc = "#F0FDF4" if perc_atraso < 10 else "#FFFBEB" if perc_atraso < 20 else "#FEF2F2"
 borda_perc = "#BBF7D0" if perc_atraso < 10 else "#FDE68A" if perc_atraso < 20 else "#FECACA"
 
-# linha principal
-col1, col2, col3, col4, col5 = st.columns([1.0, 1.15, 1.15, 1.15, 1.9])
+# Linha principal
+colr1, colr2, colr3, colr4, colr5 = st.columns([1.0, 1.15, 1.15, 1.15, 2.1])
 
-with col1:
+with colr1:
     card_indicador(
         "Notas",
         f"{total:,}".replace(",", "."),
@@ -408,7 +363,7 @@ with col1:
         mostrar_bolinha=False,
     )
 
-with col2:
+with colr2:
     card_indicador(
         "Atrasadas",
         f"{atrasadas:,}".replace(",", "."),
@@ -420,7 +375,7 @@ with col2:
         mostrar_bolinha=True,
     )
 
-with col3:
+with colr3:
     card_indicador(
         "Vence hoje",
         f"{vence_hoje:,}".replace(",", "."),
@@ -432,7 +387,7 @@ with col3:
         mostrar_bolinha=True,
     )
 
-with col4:
+with colr4:
     card_indicador(
         "No prazo",
         f"{no_prazo:,}".replace(",", "."),
@@ -444,7 +399,7 @@ with col4:
         mostrar_bolinha=True,
     )
 
-with col5:
+with colr5:
     card_indicador(
         "Valor das Notas",
         formatar_moeda_br(valor_total),
@@ -452,16 +407,16 @@ with col5:
         fundo="#EFF6FF",
         borda="#BFDBFE",
         altura=92,
-        fonte_valor=15,
+        fonte_valor=16,
         mostrar_bolinha=False,
     )
 
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# linha secundária
-col6, col7, col8 = st.columns([1.0, 1.1, 4.0])
+# Linha secundária
+colp1, colp2, colp3 = st.columns([1.0, 1.1, 4.0])
 
-with col6:
+with colp1:
     card_indicador(
         "% atraso",
         f"{perc_atraso:.1f}%",
@@ -473,7 +428,7 @@ with col6:
         mostrar_bolinha=False,
     )
 
-with col7:
+with colp2:
     card_indicador(
         "UFs no filtro",
         str(df_filtrado["UF"].nunique()),
@@ -485,9 +440,10 @@ with col7:
         mostrar_bolinha=False,
     )
 
-with col8:
+with colp3:
     st.markdown("")
-    
+
+
 # ============================================================
 # TABELA DETALHADA
 # ============================================================
@@ -510,7 +466,6 @@ if col_data:
     colunas_preferidas = [col_data] + colunas_preferidas
 
 colunas_exibir = [c for c in colunas_preferidas if c in df_filtrado.columns]
-
 tabela = df_filtrado[colunas_exibir].copy()
 
 if col_data and col_data in tabela.columns:
@@ -534,12 +489,13 @@ else:
 colunas_sort = ["_ordem_status"]
 ascending = [True]
 
-if col_data and col_data in tabela.columns:
+if col_data and col_data in df_filtrado.columns:
     tabela["_data_sort"] = pd.to_datetime(df_filtrado[col_data], errors="coerce")
     colunas_sort.append("_data_sort")
     ascending.append(False)
 
-tabela = tabela.sort_values(colunas_sort, ascending=ascending).drop(columns=[c for c in ["_ordem_status", "_data_sort"] if c in tabela.columns])
+tabela = tabela.sort_values(colunas_sort, ascending=ascending)
+tabela = tabela.drop(columns=[c for c in ["_ordem_status", "_data_sort"] if c in tabela.columns])
 
 st.dataframe(
     tabela,
