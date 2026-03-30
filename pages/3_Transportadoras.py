@@ -48,6 +48,16 @@ def card_kpi(titulo, valor, cor_fundo="#f8f9fa", cor_texto="#1f2937", tamanho="2
     )
 
 
+def cor_status(val):
+    if val == "Atrasado":
+        return "background-color: #fff1f2; color: #b91c1c;"
+    elif val == "Vence hoje":
+        return "background-color: #fffbeb; color: #b45309;"
+    elif val == "No prazo":
+        return "background-color: #f0fdf4; color: #166534;"
+    return ""
+
+
 # =========================
 # PAGINA
 # =========================
@@ -158,9 +168,11 @@ total_transportadoras = df_filtrado["Transportadora"].nunique() if "Transportado
 total_nfs = len(df_filtrado)
 valor_total = df_filtrado["Valor"].sum() if "Valor" in df_filtrado.columns else 0
 atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
+vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
 clientes = df_filtrado["Cliente"].nunique() if "Cliente" in df_filtrado.columns else 0
+perc_atraso = (atrasadas / total_nfs * 100) if total_nfs > 0 else 0
 
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1.5, 1, 1])
+col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1.5, 1, 1, 1])
 
 with col1:
     card_kpi("🚚 Transp.", str(total_transportadoras), tamanho="22px")
@@ -188,17 +200,26 @@ with col4:
 
 with col5:
     card_kpi(
-        "🏢 Clientes",
-        str(clientes),
-        cor_fundo="#f0fdf4",
-        cor_texto="#166534",
+        "🟡 Vence hoje",
+        str(vence_hoje),
+        cor_fundo="#fffbeb",
+        cor_texto="#b45309",
+        tamanho="22px"
+    )
+
+with col6:
+    card_kpi(
+        "⚠️ % Atraso",
+        f"{perc_atraso:.1f}%",
+        cor_fundo="#fff7ed",
+        cor_texto="#c2410c",
         tamanho="22px"
     )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# AGRUPAMENTOS
+# DESTAQUE
 # =========================
 nf_por_transp = (
     df_filtrado.groupby("Transportadora")
@@ -207,6 +228,14 @@ nf_por_transp = (
     .sort_values("Qtd NFs", ascending=False)
 )
 
+top_transp = nf_por_transp.iloc[0]["Transportadora"] if not nf_por_transp.empty else "-"
+top_qtd = int(nf_por_transp.iloc[0]["Qtd NFs"]) if not nf_por_transp.empty else 0
+
+st.info(f"🏆 Top transportadora: **{top_transp}** ({top_qtd} NFs)")
+
+# =========================
+# AGRUPAMENTOS
+# =========================
 valor_por_transp = (
     df_filtrado.groupby("Transportadora")["Valor"]
     .sum()
@@ -319,4 +348,20 @@ for col in ["Emissão", "Prev. Entrega"]:
 if "Valor" in tabela.columns:
     tabela["Valor"] = tabela["Valor"].apply(formatar_moeda_br)
 
-st.dataframe(tabela, use_container_width=True, hide_index=True)
+st.dataframe(
+    tabela.style.applymap(cor_status, subset=["Status"]),
+    use_container_width=True,
+    hide_index=True
+)
+
+# =========================
+# EXPORTACAO
+# =========================
+csv = tabela.to_csv(index=False).encode("utf-8-sig")
+
+st.download_button(
+    label="📥 Baixar análise em CSV",
+    data=csv,
+    file_name="transportadoras.csv",
+    mime="text/csv"
+)
