@@ -317,35 +317,109 @@ if df_filtrado.empty:
 # ============================================================
 st.subheader("Indicadores principais")
 
-total_nfs = len(df_filtrado)
-valor_notas = float(df_filtrado["Valor"].sum())
-valor_frete = float(df_filtrado["Frete_calc"].sum())
-perc_frete = percentual(valor_frete, valor_notas)
+total_notas = len(df_filtrado)
+valor_total = df_filtrado["Valor"].sum()
+valor_frete = df_filtrado["Frete_calc"].sum()
+perc_frete = (valor_frete / valor_total * 100) if valor_total > 0 else 0
 
 atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
 vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
 no_prazo = int((df_filtrado["Status"] == "No prazo").sum())
-perc_atraso = percentual(atrasadas, total_nfs)
+perc_atraso = (atrasadas / total_notas * 100) if total_notas > 0 else 0
 
-classe_perc_frete = "metric-green" if perc_frete <= 5 else "metric-yellow" if perc_frete <= 8 else "metric-red"
-classe_perc_atraso = "metric-green" if perc_atraso < 10 else "metric-yellow" if perc_atraso < 20 else "metric-red"
+col1, col2, col3, col4 = st.columns([1, 1.8, 1.6, 1])
 
-r1c1, r1c2, r1c3, r1c4 = st.columns([1.0, 1.8, 1.8, 1.2])
+with col1:
+    card_kpi(
+        "Notas",
+        f"{total_notas:,}".replace(",", "."),
+        cor_fundo="#f8fafc",
+        cor_texto="#0f172a",
+        borda="#e2e8f0",
+        tamanho="22px"
+    )
 
-metric_card(r1c1, "Notas", f"{total_nfs:,}".replace(",", "."), "metric-gray")
-metric_card(r1c2, "Valor das Notas", formatar_moeda_br(valor_notas), "metric-blue")
-metric_card(r1c3, "Valor de Frete", formatar_moeda_br(valor_frete), "metric-blue")
-metric_card(r1c4, "% Frete", f"{perc_frete:.2f}%", classe_perc_frete)
+with col2:
+    card_kpi(
+        "Valor das Notas",
+        formatar_moeda_br(valor_total),
+        cor_fundo="#eff6ff",
+        cor_texto="#1d4ed8",
+        borda="#bfdbfe",
+        tamanho="18px"
+    )
 
-st.markdown('<div class="spacer-8"></div>', unsafe_allow_html=True)
+with col3:
+    card_kpi(
+        "Valor de Frete",
+        formatar_moeda_br(valor_frete),
+        cor_fundo="#ecfeff",
+        cor_texto="#0f766e",
+        borda="#a5f3fc",
+        tamanho="18px"
+    )
 
-r2c1, r2c2, r2c3, r2c4 = st.columns([1.1, 1.1, 1.1, 1.1])
+with col4:
+    fundo_frete = "#f0fdf4" if perc_frete <= 5 else "#fffbeb" if perc_frete <= 8 else "#fff1f2"
+    texto_frete = "#166534" if perc_frete <= 5 else "#b45309" if perc_frete <= 8 else "#b91c1c"
+    borda_frete = "#bbf7d0" if perc_frete <= 5 else "#fde68a" if perc_frete <= 8 else "#fecaca"
 
-metric_card(r2c1, "🔴 Atrasadas", f"{atrasadas:,}".replace(",", "."), "metric-red")
-metric_card(r2c2, "🟡 Vence hoje", f"{vence_hoje:,}".replace(",", "."), "metric-yellow")
-metric_card(r2c3, "🟢 No prazo", f"{no_prazo:,}".replace(",", "."), "metric-green")
-metric_card(r2c4, "% Atraso", f"{perc_atraso:.1f}%", classe_perc_atraso)
+    card_kpi(
+        "% Frete",
+        f"{perc_frete:.2f}%",
+        cor_fundo=fundo_frete,
+        cor_texto=texto_frete,
+        borda=borda_frete,
+        tamanho="22px"
+    )
 
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+col5, col6, col7, col8 = st.columns(4)
+
+with col5:
+    card_kpi(
+        "🔴 Atrasadas",
+        str(atrasadas),
+        cor_fundo="#fff1f2",
+        cor_texto="#b91c1c",
+        borda="#fecdd3",
+        tamanho="22px"
+    )
+
+with col6:
+    card_kpi(
+        "🟡 Vence hoje",
+        str(vence_hoje),
+        cor_fundo="#fffbeb",
+        cor_texto="#b45309",
+        borda="#fde68a",
+        tamanho="22px"
+    )
+
+with col7:
+    card_kpi(
+        "🟢 No prazo",
+        str(no_prazo),
+        cor_fundo="#f0fdf4",
+        cor_texto="#166534",
+        borda="#bbf7d0",
+        tamanho="22px"
+    )
+
+with col8:
+    fundo_atraso = "#f0fdf4" if perc_atraso < 10 else "#fffbeb" if perc_atraso < 20 else "#fff1f2"
+    texto_atraso = "#166534" if perc_atraso < 10 else "#b45309" if perc_atraso < 20 else "#b91c1c"
+    borda_atraso = "#bbf7d0" if perc_atraso < 10 else "#fde68a" if perc_atraso < 20 else "#fecaca"
+
+    card_kpi(
+        "% Atraso",
+        f"{perc_atraso:.1f}%",
+        cor_fundo=fundo_atraso,
+        cor_texto=texto_atraso,
+        borda=borda_atraso,
+        tamanho="22px"
+    )
 
 # ============================================================
 # RESUMO EXECUTIVO
