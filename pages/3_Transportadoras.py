@@ -63,19 +63,22 @@ for col in ["Transportadora", "Cidade", "UF", "Representante", "Ocorrência", "C
     if col in df.columns:
         df[col] = df[col].astype(str).str.strip().str.upper()
 
-df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
+if "Dias" in df.columns:
+    df["Dias"] = pd.to_numeric(df["Dias"], errors="coerce").fillna(0)
 
-df["Valor"] = (
-    df["Valor"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .str.strip()
-)
-df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
+if "Valor" in df.columns:
+    df["Valor"] = (
+        df["Valor"]
+        .astype(str)
+        .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.strip()
+    )
+    df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
 
-df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
+if "Vol" in df.columns:
+    df["Vol"] = pd.to_numeric(df["Vol"], errors="coerce").fillna(0)
 
 df["Status"] = df["Dias"].apply(
     lambda x: "Atrasado" if x > 0 else ("Vence hoje" if x == 0 else "No prazo")
@@ -86,25 +89,40 @@ df["Status"] = df["Dias"].apply(
 # =========================
 st.subheader("Filtros")
 
-transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x])
+colf1, colf2 = st.columns(2)
 
-selecionadas = st.multiselect(
-    "Transportadora",
-    transportadoras,
-    default=[],
-    placeholder="Selecione uma ou mais transportadoras"
-)
+with colf1:
+    transportadoras = sorted([x for x in df["Transportadora"].dropna().unique() if x])
+    selecionadas = st.multiselect(
+        "Transportadora",
+        transportadoras,
+        default=[],
+        placeholder="Selecione uma ou mais transportadoras"
+    )
 
+with colf2:
+    status_sel = st.multiselect(
+        "Status",
+        ["Atrasado", "Vence hoje", "No prazo"],
+        default=[],
+        placeholder="Selecione um ou mais status"
+    )
+
+# aplica filtros
 if selecionadas:
     df_filtrado = df[df["Transportadora"].isin(selecionadas)].copy()
 else:
     df_filtrado = df.copy()
+
+if status_sel:
+    df_filtrado = df_filtrado[df_filtrado["Status"].isin(status_sel)]
+
 # =========================
 # KPIS
 # =========================
-total_transportadoras = df_filtrado["Transportadora"].nunique()
+total_transportadoras = df_filtrado["Transportadora"].nunique() if "Transportadora" in df_filtrado.columns else 0
 total_nfs = len(df_filtrado)
-valor_total = df_filtrado["Valor"].sum()
+valor_total = df_filtrado["Valor"].sum() if "Valor" in df_filtrado.columns else 0
 atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
 clientes = df_filtrado["Cliente"].nunique() if "Cliente" in df_filtrado.columns else 0
 
@@ -142,20 +160,6 @@ with col5:
         cor_texto="#166534",
         tamanho="22px"
     )
-
-with col6:
-    card_kpi(
-        "⚠️ % Atraso",
-        f"{perc_atraso:.1f}%",
-        cor_fundo="#fff7ed",
-        cor_texto="#c2410c",
-        tamanho="22px"
-    )
-
-top_transp = nf_por_transp.iloc[0]["Transportadora"] if not nf_por_transp.empty else "-"
-top_qtd = nf_por_transp.iloc[0]["Qtd NFs"] if not nf_por_transp.empty else 0
-
-st.info(f"🏆 Top transportadora: **{top_transp}** ({top_qtd} NFs)")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -269,7 +273,9 @@ colunas_exibir = [c for c in colunas_exibir if c in df_filtrado.columns]
 
 tabela = df_filtrado[colunas_exibir].copy()
 
-if "Dias" in tabela.columns:
+if "Dias" in tabela.columns and "Valor" in tabela.columns:
+    tabela = tabela.sort_values(by=["Dias", "Valor"], ascending=[False, False])
+elif "Dias" in tabela.columns:
     tabela = tabela.sort_values(by="Dias", ascending=False)
 
 for col in ["Emissão", "Prev. Entrega"]:
