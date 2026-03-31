@@ -1,3 +1,4 @@
+from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 import re
 import unicodedata
 import numpy as np
@@ -11,6 +12,7 @@ from utils.load_data import load_data
 # CONFIGURAÇÃO
 # ============================================================
 st.title("🔎 Consulta")
+aplicar_estilo_global()
 st.caption("Consulta detalhada de notas com filtros, busca e resumo operacional.")
 
 st.markdown(
