@@ -271,9 +271,9 @@ tamanho_padrao = "18px"
 col1, col2, col3, col4 = st.columns([1, 1.8, 1.6, 1])
 
 with col1:
-    card_kpi("Notas", f"{total_notas:,}".replace(",", "."), cor="#374151", tamanho=tamanho_padrao)
+   card_kpi("Notas", f"{total:,}".replace(",", "."), CORES["cinza"]), tamanho=tamanho_padrao)
 with col2:
-    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), cor="#2563EB", tamanho=tamanho_padrao)
+    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), CORES["azul"]), tamanho=tamanho_padrao)
 with col3:
     card_kpi("Valor de Frete", formatar_moeda_br(valor_frete), cor="#0891B2", tamanho=tamanho_padrao)
 with col4:
@@ -284,14 +284,14 @@ st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
 col5, col6, col7, col8 = st.columns(4)
 with col5:
-    card_kpi("🔴 Atrasadas", str(atrasadas), cor="#DC2626", tamanho=tamanho_padrao)
+    card_kpi("🔴 Atrasadas", f"{atrasadas:,}".replace(",", "."), CORES["vermelho"]), tamanho=tamanho_padrao)
 with col6:
-    card_kpi("🟡 Vence hoje", str(vence_hoje), cor="#D97706", tamanho=tamanho_padrao)
+    card_kpi("🟡 Vence hoje", f"{vence_hoje:,}".replace(",", "."), CORES["amarelo"]), tamanho=tamanho_padrao)
 with col7:
-    card_kpi("🟢 No prazo", str(no_prazo), cor="#16A34A", tamanho=tamanho_padrao)
+    card_kpi("🟢 No prazo", f"{no_prazo:,}".replace(",", "."), CORES["verde"]), tamanho=tamanho_padrao)
 with col8:
     cor_atraso = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else "#DC2626"
-    card_kpi("% Atraso", f"{perc_atraso:.1f}%", cor=cor_atraso, tamanho=tamanho_padrao)
+    card_kpi("% atraso", f"{perc_atraso:.1f}%", cor_percentual(perc_atraso), "18px"), tamanho=tamanho_padrao)
 
 st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
