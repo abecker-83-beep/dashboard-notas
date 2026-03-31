@@ -69,7 +69,9 @@ with m1:
 with m2:
     card_kpi("Meta % Frete", f"≤ {METAS['perc_frete']:.1f}%", cor_percentual(perc_frete, 5, 8), tam)
 with m3:
-    card_kpi("Score médio", f"{score_medio:.1f}", cor_score(score_medio), tam)
+    perc_dentro_prazo = (no_prazo / total_notas * 100) if total_notas > 0 else 0
+    cor_sla = CORES["verde"] if perc_dentro_prazo >= 94 else CORES["amarelo"] if perc_dentro_prazo >= 90 else CORES["vermelho"]
+    card_kpi("% NFs dentro do prazo", f"{perc_dentro_prazo:.1f}%", cor_sla, tam)
 
 st.subheader("🚨 Alertas automáticos")
 alertas = gerar_alertas_executivos(valor_total, valor_frete, total_notas, atrasadas, perc_frete, perc_atraso, perc_valor_atrasado)
