@@ -1,3 +1,4 @@
+from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 import re
 import unicodedata
 import requests
@@ -13,6 +14,7 @@ from utils.load_data import load_data
 # CONFIGURAÇÕES GERAIS
 # ============================================================
 st.title("🗺️ Mapa V3")
+aplicar_estilo_global()
 st.caption("Mapa operacional com visão analítica por UF, cidade e NF.")
 
 st.markdown(
