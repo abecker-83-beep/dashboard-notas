@@ -8,7 +8,7 @@ from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 # =========================
 # CONFIG
 # =========================
-st.set_page_config(page_title="Dashboard de Notas Fiscais Summit", layout="wide")
+st.set_page_config(page_title="Dashboard de Notas Fiscais", layout="wide")
 aplicar_estilo_global()
 
 import os
