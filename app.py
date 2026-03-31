@@ -8,7 +8,7 @@ st.set_page_config(page_title="Dashboard de Notas Fiscais", layout="wide")
 aplicar_estilo_global()
 render_sidebar_brand()
 
-# st.title("📊 Dashboard de Notas Fiscais | SUMMIT")
+st.title("📊 Dashboard de Notas Fiscais | SUMMIT")
 st.caption("Visão inicial do painel com navegação executiva e desempenho por transportadora.")
 
 df_raw = load_data()
