@@ -16,13 +16,17 @@ import os
 logo_path = "logo.png"
 
 if os.path.exists(logo_path):
-    st.sidebar.image(logo_path, width=140)
+    st.sidebar.markdown(
+        f"""
+        <div style="text-align: center; padding-top: 10px;">
+            <img src="{logo_path}" width="120">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 else:
     st.sidebar.markdown("## Sua Empresa")
 
-st.sidebar.markdown("---")
-
-st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("---")
 
 st.title("📊 Dashboard de Notas Fiscais")
