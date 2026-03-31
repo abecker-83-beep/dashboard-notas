@@ -8,6 +8,15 @@ st.set_page_config(page_title="Dashboard de Notas Fiscais", layout="wide")
 aplicar_estilo_global()
 render_sidebar_brand()
 
+st.markdown(
+    """
+    <div style='text-align: center; margin-bottom: 10px;'>
+        <img src='https://raw.githubusercontent.com/abecker-83-beep/dashboard-notas/main/logo.png' width='140'>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("📊 Dashboard de Notas Fiscais | SUMMIT")
 st.caption("Visão inicial do painel com navegação executiva e desempenho por transportadora.")
 
