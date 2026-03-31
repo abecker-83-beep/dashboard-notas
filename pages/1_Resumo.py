@@ -34,26 +34,6 @@ st.markdown(
         overflow: visible !important;
         text-overflow: unset !important;
     }
-    .metric-red div[data-testid="metric-container"] {
-        background: #FEF2F2;
-        border: 1px solid #FECACA;
-    }
-    .metric-yellow div[data-testid="metric-container"] {
-        background: #FFFBEB;
-        border: 1px solid #FDE68A;
-    }
-    .metric-green div[data-testid="metric-container"] {
-        background: #F0FDF4;
-        border: 1px solid #BBF7D0;
-    }
-    .metric-blue div[data-testid="metric-container"] {
-        background: #EFF6FF;
-        border: 1px solid #BFDBFE;
-    }
-    .metric-gray div[data-testid="metric-container"] {
-        background: #F8FAFC;
-        border: 1px solid #E5E7EB;
-    }
     </style>
     ''',
     unsafe_allow_html=True,
@@ -83,7 +63,10 @@ def garantir_coluna(df, coluna, valor_padrao=""):
 
 
 def detectar_coluna_data(df):
-    candidatos = ["Data", "DATA", "Dt Emissao", "DT EMISSAO", "Dt_Emissao", "Data Emissao", "Emissao", "Data NF", "Data Faturamento"]
+    candidatos = [
+        "Data", "DATA", "Dt Emissao", "DT EMISSAO", "Dt_Emissao",
+        "Data Emissao", "Emissao", "Data NF", "Data Faturamento"
+    ]
     for col in candidatos:
         if col in df.columns:
             return col
@@ -91,7 +74,10 @@ def detectar_coluna_data(df):
 
 
 def detectar_coluna_frete(df):
-    candidatos = ["Frete", "FRETE", "Valor Frete", "VALOR FRETE", "Vlr Frete", "VLR FRETE", "Frete Total", "Custo Frete", "Valor do Frete"]
+    candidatos = [
+        "Frete", "FRETE", "Valor Frete", "VALOR FRETE", "Vlr Frete",
+        "VLR FRETE", "Frete Total", "Custo Frete", "Valor do Frete"
+    ]
     for col in candidatos:
         if col in df.columns:
             return col
@@ -109,16 +95,17 @@ def converter_moeda_ou_numero(serie):
     return pd.to_numeric(serie, errors="coerce").fillna(0)
 
 
-def card_kpi(titulo, valor, cor_fundo="#f8f9fa", cor_texto="#1f2937", tamanho="24px", borda="#e5e7eb"):
+def card_kpi(titulo, valor, cor="#1f2937", tamanho="18px"):
     st.markdown(
         f'''
         <div style="
-            background: {cor_fundo};
-            border: 1px solid {borda};
-            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-left: 5px solid {cor};
+            border-radius: 12px;
             padding: 16px 18px;
-            min-height: 105px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+            min-height: 96px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -127,6 +114,7 @@ def card_kpi(titulo, valor, cor_fundo="#f8f9fa", cor_texto="#1f2937", tamanho="2
                 font-size: 13px;
                 color: #6b7280;
                 font-weight: 600;
+                margin-bottom: 8px;
                 white-space: nowrap;
                 overflow: visible;
                 text-overflow: unset;
@@ -136,7 +124,7 @@ def card_kpi(titulo, valor, cor_fundo="#f8f9fa", cor_texto="#1f2937", tamanho="2
             <div style="
                 font-size: {tamanho};
                 font-weight: 700;
-                color: {cor_texto};
+                color: {cor};
                 line-height: 1.1;
                 white-space: nowrap;
                 overflow: visible;
@@ -278,47 +266,43 @@ valor_atrasado = df_filtrado[df_filtrado["Status"] == "Atrasado"]["Valor"].sum()
 valor_vence_hoje = df_filtrado[df_filtrado["Status"] == "Vence hoje"]["Valor"].sum()
 perc_valor_atrasado = (valor_atrasado / valor_total * 100) if valor_total > 0 else 0
 
+tamanho_padrao = "18px"
+
 col1, col2, col3, col4 = st.columns([1, 1.8, 1.6, 1])
 
 with col1:
-    card_kpi("Notas", f"{total_notas:,}".replace(",", "."), cor_fundo="#f8fafc", cor_texto="#0f172a", borda="#e2e8f0", tamanho="22px")
+    card_kpi("Notas", f"{total_notas:,}".replace(",", "."), cor="#374151", tamanho=tamanho_padrao)
 with col2:
-    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), cor_fundo="#eff6ff", cor_texto="#1d4ed8", borda="#bfdbfe", tamanho="18px")
+    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), cor="#2563EB", tamanho=tamanho_padrao)
 with col3:
-    card_kpi("Valor de Frete", formatar_moeda_br(valor_frete), cor_fundo="#ecfeff", cor_texto="#0f766e", borda="#a5f3fc", tamanho="18px")
+    card_kpi("Valor de Frete", formatar_moeda_br(valor_frete), cor="#0891B2", tamanho=tamanho_padrao)
 with col4:
-    fundo_frete = "#f0fdf4" if perc_frete <= 5 else "#fffbeb" if perc_frete <= 8 else "#fff1f2"
-    texto_frete = "#166534" if perc_frete <= 5 else "#b45309" if perc_frete <= 8 else "#b91c1c"
-    borda_frete = "#bbf7d0" if perc_frete <= 5 else "#fde68a" if perc_frete <= 8 else "#fecaca"
-    card_kpi("% Frete", f"{perc_frete:.2f}%", cor_fundo=fundo_frete, cor_texto=texto_frete, borda=borda_frete, tamanho="22px")
+    cor_frete = "#16A34A" if perc_frete <= 5 else "#D97706" if perc_frete <= 8 else "#DC2626"
+    card_kpi("% Frete", f"{perc_frete:.2f}%", cor=cor_frete, tamanho=tamanho_padrao)
 
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
 col5, col6, col7, col8 = st.columns(4)
 with col5:
-    card_kpi("🔴 Atrasadas", str(atrasadas), cor_fundo="#fff1f2", cor_texto="#b91c1c", borda="#fecdd3", tamanho="22px")
+    card_kpi("🔴 Atrasadas", str(atrasadas), cor="#DC2626", tamanho=tamanho_padrao)
 with col6:
-    card_kpi("🟡 Vence hoje", str(vence_hoje), cor_fundo="#fffbeb", cor_texto="#b45309", borda="#fde68a", tamanho="22px")
+    card_kpi("🟡 Vence hoje", str(vence_hoje), cor="#D97706", tamanho=tamanho_padrao)
 with col7:
-    card_kpi("🟢 No prazo", str(no_prazo), cor_fundo="#f0fdf4", cor_texto="#166534", borda="#bbf7d0", tamanho="22px")
+    card_kpi("🟢 No prazo", str(no_prazo), cor="#16A34A", tamanho=tamanho_padrao)
 with col8:
-    fundo_atraso = "#f0fdf4" if perc_atraso < 10 else "#fffbeb" if perc_atraso < 20 else "#fff1f2"
-    texto_atraso = "#166534" if perc_atraso < 10 else "#b45309" if perc_atraso < 20 else "#b91c1c"
-    borda_atraso = "#bbf7d0" if perc_atraso < 10 else "#fde68a" if perc_atraso < 20 else "#fecaca"
-    card_kpi("% Atraso", f"{perc_atraso:.1f}%", cor_fundo=fundo_atraso, cor_texto=texto_atraso, borda=borda_atraso, tamanho="22px")
+    cor_atraso = "#16A34A" if perc_atraso < 10 else "#D97706" if perc_atraso < 20 else "#DC2626"
+    card_kpi("% Atraso", f"{perc_atraso:.1f}%", cor=cor_atraso, tamanho=tamanho_padrao)
 
 st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
 colr1, colr2, colr3 = st.columns([1.6, 1.6, 1])
 with colr1:
-    card_kpi("🚨 Valor em atraso", formatar_moeda_br(valor_atrasado), cor_fundo="#fff1f2", cor_texto="#b91c1c", borda="#fecaca", tamanho="18px")
+    card_kpi("🚨 Valor em atraso", formatar_moeda_br(valor_atrasado), cor="#DC2626", tamanho=tamanho_padrao)
 with colr2:
-    card_kpi("🟡 Valor vence hoje", formatar_moeda_br(valor_vence_hoje), cor_fundo="#fffbeb", cor_texto="#b45309", borda="#fde68a", tamanho="18px")
+    card_kpi("🟡 Valor vence hoje", formatar_moeda_br(valor_vence_hoje), cor="#D97706", tamanho=tamanho_padrao)
 with colr3:
-    cor = "#166534" if perc_valor_atrasado < 10 else "#b45309" if perc_valor_atrasado < 20 else "#b91c1c"
-    fundo = "#f0fdf4" if perc_valor_atrasado < 10 else "#fffbeb" if perc_valor_atrasado < 20 else "#fff1f2"
-    borda = "#bbf7d0" if perc_valor_atrasado < 10 else "#fde68a" if perc_valor_atrasado < 20 else "#fecaca"
-    card_kpi("% valor em risco", f"{perc_valor_atrasado:.1f}%", cor_fundo=fundo, cor_texto=cor, borda=borda, tamanho="20px")
+    cor_risco = "#16A34A" if perc_valor_atrasado < 10 else "#D97706" if perc_valor_atrasado < 20 else "#DC2626"
+    card_kpi("% valor em risco", f"{perc_valor_atrasado:.1f}%", cor=cor_risco, tamanho=tamanho_padrao)
 
 st.subheader("🚨 Alertas automáticos")
 alertas = []
@@ -340,7 +324,11 @@ st.subheader("🏆 Onde agir agora")
 ranking_problemas = (
     df_filtrado[df_filtrado["Status"] == "Atrasado"]
     .groupby("Transportadora", dropna=False)
-    .agg(qtd_atrasos=("NF", "count"), valor_atrasado=("Valor", "sum"))
+    .agg(
+        qtd_atrasos=("NF", "count"),
+        valor_atrasado=("Valor", "sum"),
+        valor_frete=("Frete_calc", "sum"),
+    )
     .reset_index()
 )
 
@@ -348,8 +336,22 @@ if ranking_problemas.empty:
     st.success("✅ Nenhuma transportadora com atraso no filtro atual")
 else:
     ranking_problemas = ranking_problemas.sort_values(["valor_atrasado", "qtd_atrasos"], ascending=False).head(5)
+    ranking_problemas["qtd_atrasos"] = ranking_problemas["qtd_atrasos"].map(lambda x: f"{int(x):,}".replace(",", "."))
     ranking_problemas["valor_atrasado"] = ranking_problemas["valor_atrasado"].apply(formatar_moeda_br)
-    st.dataframe(ranking_problemas, use_container_width=True, hide_index=True)
+    ranking_problemas["valor_frete"] = ranking_problemas["valor_frete"].apply(formatar_moeda_br)
+    ranking_problemas.columns = ["Transportadora", "Qtd. atrasos", "Valor atrasado", "Valor frete"]
+
+    st.dataframe(
+        ranking_problemas,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Transportadora": st.column_config.TextColumn("Transportadora", width="medium"),
+            "Qtd. atrasos": st.column_config.TextColumn("Qtd. atrasos", width="small"),
+            "Valor atrasado": st.column_config.TextColumn("Valor atrasado", width="medium"),
+            "Valor frete": st.column_config.TextColumn("Valor frete", width="medium"),
+        },
+    )
 
 st.subheader("Resumo executivo")
 
