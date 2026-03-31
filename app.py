@@ -11,7 +11,7 @@ from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 st.set_page_config(page_title="Dashboard de Notas Fiscais", layout="wide")
 aplicar_estilo_global()
 
-st.sidebar.image("assets/logo.png", width=140)
+st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("---")
 
 st.title("📊 Dashboard de Notas Fiscais")
