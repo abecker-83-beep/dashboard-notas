@@ -1,0 +1,102 @@
+
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+from utils.load_data import load_data
+from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual, render_sidebar_brand, cor_score, METAS
+from utils.business import preparar_base_dashboard, formatar_moeda_br, percentual, calcular_score_transportadoras, gerar_alertas_executivos, gerar_insights_transportadoras
+
+st.title("📊 Resumo")
+st.caption("Visão executiva dos indicadores operacionais, financeiros e logísticos.")
+aplicar_estilo_global()
+render_sidebar_brand()
+
+df_raw = load_data()
+df, _, col_frete_original = preparar_base_dashboard(df_raw)
+if df.empty:
+    st.warning("Nenhum dado encontrado.")
+    st.stop()
+
+total_notas = len(df)
+valor_total = df["Valor"].sum()
+valor_frete = df["Frete_calc"].sum()
+perc_frete = percentual(valor_frete, valor_total)
+atrasadas = int((df["Status"] == "Atrasado").sum())
+vence_hoje = int((df["Status"] == "Vence hoje").sum())
+no_prazo = int((df["Status"] == "No prazo").sum())
+perc_atraso = percentual(atrasadas, total_notas)
+valor_atrasado = df[df["Status"] == "Atrasado"]["Valor"].sum()
+valor_vence_hoje = df[df["Status"] == "Vence hoje"]["Valor"].sum()
+perc_valor_atrasado = percentual(valor_atrasado, valor_total)
+ranking_score = calcular_score_transportadoras(df)
+score_medio = ranking_score["score"].mean() if not ranking_score.empty else 0
+
+tam = "18px"
+c1, c2, c3, c4 = st.columns([1, 1.8, 1.6, 1])
+with c1:
+    card_kpi("Notas", f"{total_notas:,}".replace(",", "."), CORES["cinza"], tam)
+with c2:
+    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), CORES["azul"], tam)
+with c3:
+    card_kpi("Valor de Frete", formatar_moeda_br(valor_frete), CORES["ciano"], tam)
+with c4:
+    card_kpi("% Frete", f"{perc_frete:.2f}%", cor_percentual(perc_frete, 5, 8), tam)
+
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+c5, c6, c7, c8 = st.columns(4)
+with c5:
+    card_kpi("🔴 Atrasadas", str(atrasadas), CORES["vermelho"], tam)
+with c6:
+    card_kpi("🟡 Vence hoje", str(vence_hoje), CORES["amarelo"], tam)
+with c7:
+    card_kpi("🟢 No prazo", str(no_prazo), CORES["verde"], tam)
+with c8:
+    card_kpi("% Atraso", f"{perc_atraso:.1f}%", cor_percentual(perc_atraso), tam)
+
+st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+r1, r2, r3 = st.columns([1.6, 1.6, 1])
+with r1:
+    card_kpi("🚨 Valor em atraso", formatar_moeda_br(valor_atrasado), CORES["vermelho"], tam)
+with r2:
+    card_kpi("🟡 Valor vence hoje", formatar_moeda_br(valor_vence_hoje), CORES["amarelo"], tam)
+with r3:
+    card_kpi("% valor em risco", f"{perc_valor_atrasado:.1f}%", cor_percentual(perc_valor_atrasado), tam)
+
+st.subheader("🎯 Metas e SLA")
+m1, m2, m3 = st.columns(3)
+with m1:
+    card_kpi("Meta % Atraso", f"≤ {METAS['perc_atraso']:.1f}%", cor_percentual(perc_atraso), tam)
+with m2:
+    card_kpi("Meta % Frete", f"≤ {METAS['perc_frete']:.1f}%", cor_percentual(perc_frete, 5, 8), tam)
+with m3:
+    card_kpi("Score médio", f"{score_medio:.1f}", cor_score(score_medio), tam)
+
+st.subheader("🚨 Alertas automáticos")
+alertas = gerar_alertas_executivos(valor_total, valor_frete, total_notas, atrasadas, perc_frete, perc_atraso, perc_valor_atrasado)
+if not alertas:
+    st.success("✅ Operação dentro dos padrões")
+else:
+    for alerta in alertas:
+        st.warning(alerta)
+
+st.subheader("🏆 Onde agir agora")
+ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascending=[True, False]).head(5).copy()
+ranking_problemas["valor_risco"] = ranking_problemas["valor_risco"].apply(formatar_moeda_br)
+ranking_problemas["perc_frete"] = ranking_problemas["perc_frete"].map(lambda x: f"{x:.2f}%")
+ranking_problemas["score"] = ranking_problemas["score"].map(lambda x: f"{x:.1f}")
+st.dataframe(ranking_problemas[["Transportadora", "qtd_notas", "valor_risco", "perc_frete", "score", "classificacao"]], use_container_width=True, hide_index=True)
+
+st.subheader("🧠 Insights automáticos")
+for insight in gerar_insights_transportadoras(ranking_score):
+    st.info(insight)
+
+st.subheader("Visões gráficas")
+g1, g2 = st.columns(2)
+with g1:
+    status_df = pd.DataFrame({"Status": ["Atrasado", "Vence hoje", "No prazo"], "Quantidade": [atrasadas, vence_hoje, no_prazo]})
+    fig_status = px.bar(status_df, x="Status", y="Quantidade", title="Distribuição por Status")
+    st.plotly_chart(fig_status, use_container_width=True)
+with g2:
+    financeiro_df = pd.DataFrame({"Indicador": ["Valor das Notas", "Valor de Frete", "Valor em atraso"], "Valor": [valor_total, valor_frete, valor_atrasado]})
+    fig_fin = px.bar(financeiro_df, x="Indicador", y="Valor", title="Notas vs Frete vs Risco")
+    st.plotly_chart(fig_fin, use_container_width=True)
