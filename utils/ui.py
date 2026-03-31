@@ -1,6 +1,18 @@
-def card_kpi(titulo, valor, cor="#1f2937", tamanho="18px"):
-    import streamlit as st
+# utils/ui.py
 
+import streamlit as st
+
+CORES = {
+    "azul": "#2563EB",
+    "verde": "#16A34A",
+    "amarelo": "#D97706",
+    "vermelho": "#DC2626",
+    "cinza": "#374151",
+    "ciano": "#0891B2"
+}
+
+
+def card_kpi(titulo, valor, cor="#1f2937", tamanho="18px"):
     st.markdown(
         f"""
         <div style="
