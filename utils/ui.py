@@ -15,9 +15,9 @@ CORES = {
 }
 
 METAS = {
-    "perc_atraso": 10.0,
-    "perc_frete": 5.0,
-    "score_bom": 85.0,
+    "perc_atraso": 6.0,
+    "perc_frete": 4.5,
+    "score_bom": 90.0,
     "score_excelente": 95.0,
 }
 
