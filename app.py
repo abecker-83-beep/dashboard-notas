@@ -11,6 +11,17 @@ from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 st.set_page_config(page_title="Dashboard de Notas Fiscais", layout="wide")
 aplicar_estilo_global()
 
+import os
+
+logo_path = "logo.png"
+
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, width=140)
+else:
+    st.sidebar.markdown("## Sua Empresa")
+
+st.sidebar.markdown("---")
+
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("---")
 
