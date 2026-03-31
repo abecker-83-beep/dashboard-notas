@@ -1,3 +1,4 @@
+from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -62,6 +63,7 @@ def cor_status(val):
 # PAGINA
 # =========================
 st.title("🚚 Transportadoras")
+aplicar_estilo_global()
 
 df = load_data()
 df.columns = df.columns.str.strip()
