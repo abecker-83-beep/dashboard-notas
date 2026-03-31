@@ -449,10 +449,13 @@ def exibir_insights(mapa_cidade, mapa_uf):
         if cidades_criticas.empty:
             st.success("Nenhuma cidade com atraso no filtro atual.")
         else:
-            tabela = cidades_criticas[["Cidade", "UF", "qtd_atrasadas", "perc_atraso", "valor_total"]].copy()
-            tabela.columns = ["Cidade", "UF", "Qtd atrasadas", "% atraso", "Valor total"]
-            tabela["Valor total"] = tabela["Valor total"].apply(formatar_moeda_br)
-            st.dataframe(tabela, use_container_width=True, hide_index=True)
+           tabela = cidades_criticas[["Cidade", "UF", "qtd_atrasadas", "perc_atraso", "valor_total"]].copy()
+           tabela.columns = ["Cidade", "UF", "Qtd atrasadas", "% atraso", "Valor total"]
+
+           tabela["% atraso"] = tabela["% atraso"].map(lambda x: f"{x:.1f}%")
+           tabela["Valor total"] = tabela["Valor total"].apply(formatar_moeda_br)
+
+           st.dataframe(tabela, use_container_width=True, hide_index=True)
 
     with col2:
         st.markdown("**Regiões críticas (UFs)**")
@@ -583,7 +586,7 @@ st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 st.subheader("Mapa do Brasil por UF")
 
 fig_uf = gerar_mapa_uf(mapa_uf, metrica, metrica_label)
-st.plotly_chart(fig_uf, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True})
 
 ranking_uf = mapa_uf.sort_values(metrica, ascending=False).copy()
 ranking_uf["valor_total_fmt"] = ranking_uf["valor_total"].apply(formatar_moeda_br)
