@@ -74,12 +74,15 @@ with m3:
     card_kpi("% NFs dentro do prazo", f"{perc_dentro_prazo:.1f}%", cor_sla, tam)
 
 st.subheader("🚨 Alertas automáticos")
-alertas = gerar_alertas_executivos(valor_total, valor_frete, total_notas, atrasadas, perc_frete, perc_atraso, perc_valor_atrasado)
-if not alertas:
-    st.success("✅ Operação dentro dos padrões")
+
+if perc_atraso <= 6:
+    st.success("✅ Operação dentro do esperado")
+
+elif perc_atraso <= 10:
+    st.warning("⚠️ Atenção: atrasos recorrentes")
+
 else:
-    for alerta in alertas:
-        st.warning(alerta)
+    st.error("🚨 Atrasos graves — atuar urgente")
 
 st.subheader("🏆 Onde agir agora")
 ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascending=[True, False]).head(5).copy()
