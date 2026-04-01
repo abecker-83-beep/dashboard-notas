@@ -47,7 +47,7 @@ ranking_score = calcular_score_transportadoras(df)
 score_medio = ranking_score["score"].mean() if not ranking_score.empty else 0
 
 tam = "18px"
-c1, c2, c3, c4 = st.columns([1, 1.8, 1.6, 1])
+c1, c2, c3, c4 = get_kpi_columns_custom()
 with c1:
     card_kpi("Notas", f"{total_notas:,}".replace(",", "."), CORES["cinza"], tam)
 with c2:
