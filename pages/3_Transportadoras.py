@@ -14,16 +14,42 @@ render_sidebar_brand()
 df_raw = load_data()
 df, _, col_frete = preparar_base_dashboard(df_raw)
 
-total_transportadoras = df["Transportadora"].nunique()
-total_nfs = len(df)
-valor_total = df["Valor"].sum()
-valor_frete = df["Frete_calc"].sum()
-atrasadas = int((df["Status"] == "Atrasado").sum())
-vence_hoje = int((df["Status"] == "Vence hoje").sum())
-perc_atraso = (atrasadas / total_nfs * 100) if total_nfs > 0 else 0
-perc_frete = (valor_frete / valor_total * 100) if valor_total > 0 else 0
+render_section_header("🎛️ Filtro de transportadora")
 
-ranking_score = calcular_score_transportadoras(df)
+opcoes_transportadora = sorted(
+    [t for t in df["Transportadora"].dropna().unique().tolist() if str(t).strip() != ""]
+)
+
+transportadora_selecionada = st.selectbox(
+    "Selecione uma transportadora",
+    options=["Todas"] + opcoes_transportadora
+)
+
+if transportadora_selecionada != "Todas":
+    df_filtrado = df[df["Transportadora"] == transportadora_selecionada].copy()
+else:
+    df_filtrado = df.copy()
+
+# ===== INDICADORES BASEADOS NO FILTRO =====
+
+total_transportadoras = df_filtrado["Transportadora"].nunique()
+total_notas = len(df_filtrado)
+
+atrasadas = int((df_filtrado["Status"] == "Atrasado").sum())
+vence_hoje = int((df_filtrado["Status"] == "Vence hoje").sum())
+no_prazo = int((df_filtrado["Status"] == "No prazo").sum())
+
+valor_total = float(df_filtrado["Valor"].sum())
+valor_frete = float(df_filtrado["Frete_calc"].sum())
+
+perc_frete = (valor_frete / valor_total * 100) if valor_total > 0 else 0
+perc_atraso = (atrasadas / total_notas * 100) if total_notas > 0 else 0
+
+# score recalculado com base no filtro
+ranking_score = calcular_score_transportadoras(df_filtrado)
+score_medio = ranking_score["score"].mean() if not ranking_score.empty else 0
+
+ranking_score = calcular_score_transportadoras(df_filtrado)
 score_medio = ranking_score["score"].mean() if not ranking_score.empty else 0
 
 tam = "18px"
