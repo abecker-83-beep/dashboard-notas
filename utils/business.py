@@ -70,12 +70,11 @@ def preparar_base_dashboard(df):
 def classificar_score(score):
     if score >= 95:
         return "Excelente"
-    if score >= 85:
-        return "Boa"
-    if score >= 70:
+    elif score >= 89:
         return "Atenção"
-    return "Crítica"
-
+    else:
+        return "Crítica"
+        
 def calcular_score_transportadoras(df):
     base = df.copy()
     agrupado = (
