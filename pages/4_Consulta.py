@@ -64,13 +64,6 @@ with r2c1:
 with r2c2:
     card_kpi("UFs no filtro", str(df["UF"].nunique()), CORES["cinza"])
 
-render_section_header("📋 Tabela detalhada")
-tabela = df[["NF","Cliente","Cidade","UF","Transportadora","Representante","Valor","Vol","Dias","Status"]].copy()
-tabela["Valor"] = tabela["Valor"].apply(formatar_moeda_br)
-st.dataframe(tabela, use_container_width=True, hide_index=True)
-aplicar_estilo_global()
-render_sidebar_brand()
-
 df_raw = load_data()
 df, col_data, _ = preparar_base_dashboard(df_raw)
 if df.empty:
