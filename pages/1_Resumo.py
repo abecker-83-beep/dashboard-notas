@@ -78,7 +78,7 @@ with r2:
 with r3:
     card_kpi("% valor em risco", f"{perc_valor_atrasado:.1f}%", cor_percentual(perc_valor_atrasado), tam)
 
-st.subheader("🎯 Metas e SLA")
+render_section_header("🎯 Metas e SLA")
 m1, m2, m3 = st.columns(3)
 with m1:
     card_kpi("Meta % Atraso", f"≤ {METAS['perc_atraso']:.1f}%", cor_percentual(perc_atraso), tam)
@@ -89,7 +89,7 @@ with m3:
     cor_sla = CORES["verde"] if perc_dentro_prazo >= 94 else CORES["amarelo"] if perc_dentro_prazo >= 90 else CORES["vermelho"]
     card_kpi("% NFs dentro do prazo", f"{perc_dentro_prazo:.1f}%", cor_sla, tam)
 
-st.subheader("🚨 Alertas automáticos")
+render_section_header("🚨 Alertas automáticos")
 
 if perc_atraso <= 6:
     st.success("✅ Operação dentro do esperado")
@@ -100,18 +100,18 @@ elif perc_atraso <= 10:
 else:
     st.error("🚨 Atrasos graves — atuar urgente")
 
-st.subheader("🏆 Onde agir agora")
+render_section_header("🏆 Onde agir agora")
 ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascending=[True, False]).head(5).copy()
 ranking_problemas["valor_risco"] = ranking_problemas["valor_risco"].apply(formatar_moeda_br)
 ranking_problemas["perc_frete"] = ranking_problemas["perc_frete"].map(lambda x: f"{x:.2f}%")
 ranking_problemas["score"] = ranking_problemas["score"].map(lambda x: f"{x:.1f}")
 st.dataframe(ranking_problemas[["Transportadora", "qtd_notas", "valor_risco", "perc_frete", "score", "classificacao"]], use_container_width=True, hide_index=True)
 
-st.subheader("🧠 Insights automáticos")
+render_section_header("🧠 Insights automáticos")
 for insight in gerar_insights_transportadoras(ranking_score):
     st.info(insight)
 
-st.subheader("Visões gráficas")
+render_section_header("Visões gráficas")
 g1, g2 = st.columns(2)
 with g1:
     status_df = pd.DataFrame({"Status": ["Atrasado", "Vence hoje", "No prazo"], "Quantidade": [atrasadas, vence_hoje, no_prazo]})
