@@ -141,3 +141,6 @@ def get_standard_two_columns():
 
 def get_standard_half_columns():
     return st.columns(2)
+
+def get_kpi_columns_custom():
+    return st.columns([1, 1.8, 1.6, 1])
