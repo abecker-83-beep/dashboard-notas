@@ -10,6 +10,7 @@ from utils.ui import (
     render_spacer,
     get_standard_kpi_columns,
     get_standard_two_columns,
+    get_kpi_columns_custom,
 )
 
 from utils.load_data import load_data
