@@ -106,13 +106,19 @@ st.caption(
     "🟡 Atenção (89 a 94,9), 🔴 Crítica (<89)."
 )
 
+def formatar_classificacao(x):
+    if x == "Excelente":
+        return "🟢 Excelente"
+    elif x == "Atenção":
+        return "🟡 Atenção"
+    else:
+        return "🔴 Crítica"
+        
 ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascending=[True, False]).head(5).copy()
 ranking_problemas["valor_risco"] = ranking_problemas["valor_risco"].apply(formatar_moeda_br)
 ranking_problemas["perc_frete"] = ranking_problemas["perc_frete"].map(lambda x: f"{x:.2f}%")
 ranking_problemas["score"] = ranking_problemas["score"].map(lambda x: f"{x:.1f}%")
-ranking_problemas["classificacao"] = ranking_problemas["classificacao"].map(
-    lambda x: "🟢 Excelente" if x == "Excelente" else ("🟡 Atenção" if x == "Atenção" else "🔴 Crítica")
-)
+ranking_problemas["classificacao"] = ranking_problemas["classificacao"].map(formatar_classificacao)
 
 st.dataframe(
     ranking_problemas[["Transportadora", "qtd_notas", "valor_risco", "perc_frete", "score", "classificacao"]], 
