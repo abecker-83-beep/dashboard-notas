@@ -10,6 +10,7 @@ from utils.ui import (
     render_sidebar_brand,
     setup_page,
     render_page_header,
+    render_section_header,
     render_spacer,
 )
 
