@@ -10,9 +10,10 @@ render_sidebar_brand()
 
 st.markdown(
     """
-    <div style='text-align: center; margin-bottom: 10px;'>
-        <img src='https://raw.githubusercontent.com/abecker-83-beep/dashboard-notas/main/logo.png' width='140'>
+    <div style='text-align: center; margin-top: 10px; margin-bottom: 5px;'>
+        <img src='https://raw.githubusercontent.com/abecker-83-beep/dashboard-notas/main/logo.png' width='180'>
     </div>
+    <hr style='margin-top: 5px; margin-bottom: 15px;'>
     """,
     unsafe_allow_html=True
 )
