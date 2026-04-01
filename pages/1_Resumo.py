@@ -113,17 +113,23 @@ def formatar_classificacao(x):
         return "🟡 Atenção"
     else:
         return "🔴 Crítica"
-        
-ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascending=[True, False]).head(5).copy()
+
+ranking_problemas = ranking_score.sort_values(
+    ["score", "valor_risco"], ascending=[True, False]
+).head(5).copy()
+
 ranking_problemas["valor_risco"] = ranking_problemas["valor_risco"].apply(formatar_moeda_br)
 ranking_problemas["perc_frete"] = ranking_problemas["perc_frete"].map(lambda x: f"{x:.2f}%")
 ranking_problemas["score"] = ranking_problemas["score"].map(lambda x: f"{x:.1f}%")
 ranking_problemas["classificacao"] = ranking_problemas["classificacao"].map(formatar_classificacao)
 
 st.dataframe(
-    ranking_problemas[["Transportadora", "qtd_notas", "valor_risco", "perc_frete", "score", "classificacao"]], 
-    use_container_width=True, 
-    hide_index=True)
+    ranking_problemas[
+        ["Transportadora", "qtd_notas", "valor_risco", "perc_frete", "score", "classificacao"]
+    ],
+    use_container_width=True,
+    hide_index=True
+)
 
 render_section_header("🧠 Insights automáticos")
 for insight in gerar_insights_transportadoras(ranking_score):
