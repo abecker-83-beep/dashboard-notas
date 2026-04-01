@@ -2,12 +2,27 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+
+from utils.ui import (
+    setup_page,
+    render_page_header,
+    render_section_header,
+    render_spacer,
+    get_standard_kpi_columns,
+    get_standard_two_columns,
+)
+
 from utils.load_data import load_data
 from utils.ui import card_kpi, CORES, aplicar_estilo_global, cor_percentual, render_sidebar_brand, cor_score, METAS
 from utils.business import preparar_base_dashboard, formatar_moeda_br, percentual, calcular_score_transportadoras, gerar_alertas_executivos, gerar_insights_transportadoras
 
-st.title("📊 Resumo")
-st.caption("Visão executiva dos indicadores operacionais, financeiros e logísticos.")
+setup_page("Resumo")
+
+render_page_header(
+    "📊 Resumo",
+    "Visão executiva dos indicadores operacionais, financeiros e logísticos."
+)
+
 aplicar_estilo_global()
 render_sidebar_brand()
 
