@@ -142,7 +142,18 @@ render_section_header("Visões gráficas")
 g1, g2 = st.columns(2)
 with g1:
     status_df = pd.DataFrame({"Status": ["Atrasado", "Vence hoje", "No prazo"], "Quantidade": [atrasadas, vence_hoje, no_prazo]})
-    fig_status = px.bar(status_df, x="Status", y="Quantidade", title="Distribuição por Status")
+    fig_status = px.bar(
+    status_df,
+    x="Status",
+    y="Quantidade",
+    title="Distribuição por Status",
+    color="Status",
+    color_discrete_map={
+        "Atrasado": "#EF4444",      # vermelho
+        "Vence hoje": "#F59E0B",    # amarelo
+        "No prazo": "#22C55E"       # verde
+    }
+)
     st.plotly_chart(fig_status, use_container_width=True)
 with g2:
     financeiro_df = pd.DataFrame({"Indicador": ["Valor das Notas", "Valor de Frete", "Valor em atraso"], "Valor": [valor_total, valor_frete, valor_atrasado]})
