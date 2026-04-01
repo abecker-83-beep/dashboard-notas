@@ -111,6 +111,15 @@ def gerar_alertas_executivos(valor_total, valor_frete, total_notas, atrasadas, p
     else:
         alertas.append("🚨 Atrasos graves — atuar urgente")
 
+    if perc_frete > 8:
+        alertas.append(f"⚠️ Frete elevado: {perc_frete:.2f}% do faturamento.")
+    if perc_valor_risco > 15:
+        alertas.append(f"💰 Valor em risco elevado: {perc_valor_risco:.1f}% do total das notas.")
+    if valor_total <= 0:
+        alertas.append("ℹ️ Valor total das notas zerado ou não disponível.")
+    if total_notas <= 0:
+        alertas.append("ℹ️ Não há notas no filtro selecionado.")
+
     return alertas
 
 def gerar_insights_transportadoras(ranking):
