@@ -110,7 +110,6 @@ ranking_problemas = ranking_score.sort_values(["score", "valor_risco"], ascendin
 ranking_problemas["valor_risco"] = ranking_problemas["valor_risco"].apply(formatar_moeda_br)
 ranking_problemas["perc_frete"] = ranking_problemas["perc_frete"].map(lambda x: f"{x:.2f}%")
 ranking_problemas["score"] = ranking_problemas["score"].map(lambda x: f"{x:.1f}%")
-
 ranking_problemas["classificacao"] = ranking_problemas["classificacao"].map(
     lambda x: "🟢 Excelente" if x == "Excelente" else ("🟡 Atenção" if x == "Atenção" else "🔴 Crítica")
 )
