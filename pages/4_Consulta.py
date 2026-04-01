@@ -109,13 +109,6 @@ if df.empty:
     st.warning("Nenhum dado encontrado.")
     st.stop()
 
-total = len(df)
-atrasadas = int((df["Status"] == "Atrasado").sum())
-vence_hoje = int((df["Status"] == "Vence hoje").sum())
-no_prazo = int((df["Status"] == "No prazo").sum())
-valor_total = float(df["Valor"].sum())
-perc_atraso = (atrasadas / total * 100) if total > 0 else 0
-
 r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns([1.0, 1.15, 1.15, 1.15, 2.1])
 with r1c1:
     card_kpi("Notas", f"{total:,}".replace(",", "."), CORES["cinza"])
