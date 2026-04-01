@@ -104,3 +104,40 @@ def cor_score(score):
     if score >= METAS["score_bom"]:
         return CORES["amarelo"]
     return CORES["vermelho"]
+
+import streamlit as st
+
+
+def setup_page(title: str):
+    st.set_page_config(
+        page_title=title,
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
+
+def render_page_header(title: str, subtitle: str = None):
+    st.markdown(f"## {title}")
+    if subtitle:
+        st.caption(subtitle)
+    st.divider()
+
+
+def render_section_header(title: str):
+    st.markdown(f"### {title}")
+
+
+def render_spacer(lines: int = 1):
+    for _ in range(lines):
+        st.write("")
+
+
+def get_standard_kpi_columns():
+    return st.columns(4)
+
+
+def get_standard_two_columns():
+    return st.columns([2, 1])
+
+
+def get_standard_half_columns():
+    return st.columns(2)
