@@ -144,3 +144,6 @@ def get_standard_half_columns():
 
 def get_kpi_columns_custom():
     return st.columns([1, 1.8, 1.6, 1])
+
+def render_section_header(title: str):
+    st.markdown(f"### {title}")
