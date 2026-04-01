@@ -100,11 +100,14 @@ elif perc_atraso <= 10:
 else:
     st.error("🚨 Atrasos graves — atuar urgente")
 
-render_section_header("🏆 Onde agir agora")
+st.markdown("## 🚨 Onde agir agora")
+
 st.caption(
     "Score de eficiência das transportadoras: 🟢 Excelente (>=95), "
     "🟡 Atenção (89 a 94,9), 🔴 Crítica (<89)."
 )
+
+st.warning("As transportadoras abaixo apresentam maior risco operacional e financeiro.")
 
 def formatar_classificacao(x):
     if x == "Excelente":
