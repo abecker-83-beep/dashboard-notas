@@ -108,27 +108,6 @@ if df.empty:
     st.warning("Nenhum dado encontrado.")
     st.stop()
 
-with r1c1:
-    card_kpi("Notas", f"{total:,}".replace(",", "."), CORES["cinza"])
-with r1c2:
-    card_kpi("🔴 Atrasadas", f"{atrasadas:,}".replace(",", "."), CORES["vermelho"])
-with r1c3:
-    card_kpi("🟡 Vence hoje", f"{vence_hoje:,}".replace(",", "."), CORES["amarelo"])
-with r1c4:
-    card_kpi("🟢 No prazo", f"{no_prazo:,}".replace(",", "."), CORES["verde"])
-with r1c5:
-    card_kpi("Valor das Notas", formatar_moeda_br(valor_total), CORES["azul"])
-
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-with r2c1:
-    card_kpi("% atraso", f"{perc_atraso:.1f}%", cor_percentual(perc_atraso))
-with r2c2:
-    card_kpi("UFs no filtro", str(df["UF"].nunique()), CORES["cinza"])
-
-if df_filtrado.empty:
-    st.warning("Nenhum registro encontrado para os filtros selecionados.")
-    st.stop()
-
 render_section_header("📋 Tabela detalhada")
 tabela = df_filtrado[["NF","Cliente","Cidade","UF","Transportadora","Representante","Valor","Vol","Dias","Status"]].copy()
 tabela["Valor"] = tabela["Valor"].apply(formatar_moeda_br)
