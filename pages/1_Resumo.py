@@ -134,7 +134,6 @@ st.dataframe(
 render_section_header("🧠 Insights automáticos")
 for insight in gerar_insights_transportadoras(ranking_score):
     st.info(insight)
-)
 
 render_section_header("Visões gráficas")
 g1, g2 = st.columns(2)
