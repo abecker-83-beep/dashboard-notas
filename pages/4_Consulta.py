@@ -120,7 +120,6 @@ with r1c5:
     card_kpi("Valor das Notas", formatar_moeda_br(valor_total), CORES["azul"])
 
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-r2c1, r2c2 = st.columns([1.0, 1.1])
 with r2c1:
     card_kpi("% atraso", f"{perc_atraso:.1f}%", cor_percentual(perc_atraso))
 with r2c2:
