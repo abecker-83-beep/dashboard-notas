@@ -157,5 +157,16 @@ with g1:
     st.plotly_chart(fig_status, use_container_width=True)
 with g2:
     financeiro_df = pd.DataFrame({"Indicador": ["Valor das Notas", "Valor de Frete", "Valor em atraso"], "Valor": [valor_total, valor_frete, valor_atrasado]})
-    fig_fin = px.bar(financeiro_df, x="Indicador", y="Valor", title="Notas vs Frete vs Risco")
+    fig_fin = px.bar(
+    financeiro_df,
+    x="Indicador",
+    y="Valor",
+    title="Notas vs Frete vs Risco",
+    color="Indicador",
+    color_discrete_map={
+        "Valor das Notas": "#2563EB",   # azul
+        "Valor de Frete": "#06B6D4",    # ciano
+        "Valor em atraso": "#EF4444"    # vermelho
+    }
+)
     st.plotly_chart(fig_fin, use_container_width=True)
