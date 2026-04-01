@@ -58,7 +58,7 @@ with c3:
 with c4:
     card_kpi("% Frete", f"{perc_frete:.2f}%", cor_percentual(perc_frete, 5, 8), tam)
 
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+render_spacer()
 c5, c6, c7, c8 = st.columns(4)
 with c5:
     card_kpi("🔴 Atrasadas", str(atrasadas), CORES["vermelho"], tam)
